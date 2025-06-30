@@ -5,14 +5,15 @@ pluginManagement {
         gradlePluginPortal()
     }
     plugins {
-        id 'com.android.application'        version '8.11.0'
-        id 'org.jetbrains.kotlin.android'  version '2.2.0'
-        id 'kotlin-kapt'                   version '2.2.0'
-        id 'dagger.hilt.android.plugin'    version '2.56.2'
+        id 'com.android.application' version '8.11.0'
+        id 'org.jetbrains.kotlin.android' version '2.1.10'
+        id 'org.jetbrains.kotlin.kapt' version '2.1.10'  // Changed from 'kotlin-kapt'
+        id 'dagger.hilt.android.plugin' version '2.56.2'
     }
 }
 
 dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
@@ -20,4 +21,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "UpListTracker"
-include(":app")
+include ':app'

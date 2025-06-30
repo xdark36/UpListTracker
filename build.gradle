@@ -1,17 +1,17 @@
 // File: build.gradle (project root)
 
 buildscript {
-    ext.kotlin_version = '2.1.10'  // Updated to latest Kotlin version
+    ext.kotlin_version = '2.1.10'  // Downgrade to stable version compatible with Gradle 8.13
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        // Update Android Gradle Plugin if needed (example using AGP 8.1.0 here)
+        // Keep Android Gradle Plugin at 8.11.0 for compatibility
         classpath 'com.android.tools.build:gradle:8.11.0'
         // Use the updated Kotlin Gradle plugin version
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        // Hilt Gradle plugin (keep the version you use, 2.56.2 in this case)
+        // Hilt Gradle plugin
         classpath "com.google.dagger:hilt-android-gradle-plugin:2.56.2"
     }
 }
@@ -21,4 +21,9 @@ allprojects {
         google()
         mavenCentral()
     }
+}
+
+// Add this to suppress specific deprecation warnings if needed
+gradle.beforeProject { project ->
+    project.ext.set("android.suppressUnsupportedCompileSdk", 35)
 }
