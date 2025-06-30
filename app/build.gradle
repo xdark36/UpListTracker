@@ -1,17 +1,16 @@
 plugins {
-    id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
-    id 'org.jetbrains.kotlin.kapt'
-    id 'dagger.hilt.android.plugin'
-    id 'org.jetbrains.kotlin.plugin.compose' version '2.1.10'
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.hilt)
 }
 
 android {
-    namespace 'com.yourpackage.uplisttracker'
+    namespace 'com.example.uplisttracker'
     compileSdk 35
 
     defaultConfig {
-        applicationId "com.yourpackage.uplisttracker"
+        applicationId "com.example.uplisttracker"
         minSdk 24
         targetSdk 35
         versionCode 1
@@ -44,10 +43,10 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = '1.5.15'
+        kotlinCompilerExtensionVersion = libs.versions.compose.ui.get()
     }
 
-    packaging {
+    packagingOptions {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
@@ -55,6 +54,7 @@ android {
 }
 
 dependencies {
+    // Core Android libraries
     implementation libs.android.core.ktx
     implementation libs.lifecycle.runtime.ktx
     implementation libs.activity.compose
@@ -66,13 +66,13 @@ dependencies {
     implementation libs.compose.ui.tooling.preview
     implementation libs.material3
 
-    // Hilt
+    // Hilt for dependency injection
     implementation libs.hilt.android
-    kapt libs.hilt.compiler
     implementation libs.hilt.work
+    kapt libs.hilt.compiler
     kapt libs.hilt.work.compiler
 
-    // Networking
+    // Network libraries
     implementation libs.okhttp
     implementation libs.okhttp.urlconnection
     implementation libs.jsoup
@@ -92,5 +92,5 @@ dependencies {
 
 // Allow references to generated code
 kapt {
-    correctErrorTypes = true
+    correctErrorTypes true
 }
