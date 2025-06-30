@@ -1,14 +1,18 @@
 // File: build.gradle (project root)
 
 buildscript {
+    ext.kotlin_version = '2.1.10'  // Updated to latest Kotlin version
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.11.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.10"
-        classpath "com.google.dagger:hilt-android-gradle-plugin:2.48"
+        // Update Android Gradle Plugin if needed (example using AGP 8.1.0 here)
+        classpath "com.android.tools.build:gradle:8.1.0"
+        // Use the updated Kotlin Gradle plugin version
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // Hilt Gradle plugin (keep the version you use, 2.56.2 in this case)
+        classpath "com.google.dagger:hilt-android-gradle-plugin:2.56.2"
     }
 }
 
