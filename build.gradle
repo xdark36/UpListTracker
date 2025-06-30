@@ -8,7 +8,7 @@ buildscript {
     }
     dependencies {
         // Update Android Gradle Plugin if needed (example using AGP 8.1.0 here)
-        classpath "com.android.tools.build:gradle:8.1.0"
+        classpath 'com.android.tools.build:gradle:8.11.0'
         // Use the updated Kotlin Gradle plugin version
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         // Hilt Gradle plugin (keep the version you use, 2.56.2 in this case)
