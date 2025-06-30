@@ -1,23 +1,27 @@
+// settings.gradle (project root)
+
 pluginManagement {
     repositories {
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
+        google()
         mavenCentral()
         gradlePluginPortal()
     }
+    plugins {
+        // Bump AGP to 8.11.0 so all your AndroidX artifacts (core, lifecycle, compose) pass metadata checks
+        id 'com.android.application'        version '8.11.0'
+        id 'org.jetbrains.kotlin.android'  version '2.2.0'
+        id 'kotlin-kapt'                   version '2.2.0'
+        id 'dagger.hilt.android.plugin'    version '2.56.2'
+    }
 }
+
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
     }
+    // (no versionCatalogs block)
 }
 
-rootProject.name = "Up List Tracker"
-include ':app'
+rootProject.name = "UpListTracker"
+include(":app")
