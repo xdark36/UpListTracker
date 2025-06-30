@@ -16,13 +16,6 @@ buildscript {
     }
 }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
 // Add this to suppress specific deprecation warnings if needed
 gradle.beforeProject { project ->
     project.ext.set("android.suppressUnsupportedCompileSdk", 35)
