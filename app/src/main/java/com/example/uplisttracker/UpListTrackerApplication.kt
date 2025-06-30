@@ -11,8 +11,6 @@ class UpListTrackerApplication : Application() {
         super.onCreate()
 
         // Initialize Timber for logging
-        if (BuildConfig.DEBUG) {
-            Timber.plant(Timber.DebugTree())
-        }
+        Timber.plant(Timber.DebugTree())
     }
 }

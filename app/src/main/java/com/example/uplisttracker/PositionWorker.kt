@@ -3,8 +3,10 @@ package com.example.uplisttracker
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.ListenableWorker
@@ -72,6 +74,18 @@ class PositionWorker(
 
     private fun showNotification(title: String, message: String) {
         createNotificationChannel()
+
+        // Check POST_NOTIFICATIONS permission for Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val hasPermission = ContextCompat.checkSelfPermission(
+                applicationContext,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!hasPermission) {
+                Timber.w("POST_NOTIFICATIONS permission not granted; notification not shown.")
+                return
+            }
+        }
 
         val notif = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setContentTitle(title)
