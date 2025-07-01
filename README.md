@@ -223,11 +223,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Changelog
 
 ### Latest Update
+- Added position history tracking - stores last 10 position changes with timestamps
+- Added "View History" button to display position history in a dialog
+- Added "Clear History" option to reset position history
+- Improved UI layout with better button organization
+- Enhanced position display formatting
 - Added copy position functionality with dedicated button
 - Enhanced notification with restart action and better status display
 - Added debug force error button for testing
-- Improved UI layout and accessibility
-- Better error handling and user feedback
 
 ### Previous Updates
 - Implemented StateFlow for real-time position updates
