@@ -120,7 +120,7 @@ class PositionMonitorService : Service() {
         val maxAttempts = 3
         while (attempt < maxAttempts) {
             try {
-                Timber.d("Checking position for URL: $url (attempt ${attempt + 1})")
+                Timber.i("Checking position for URL: $url (attempt ${attempt + 1}/$maxAttempts)")
 
                 val client = OkHttpClient()
 
@@ -129,6 +129,8 @@ class PositionMonitorService : Service() {
                 val loginUrl = prefs.getString("login_url", "https://selling1.vcfcorp.com/") ?: "https://selling1.vcfcorp.com/"
                 val empNumber = prefs.getString("emp_number", "90045") ?: "90045"
                 val userPassword = prefs.getString("user_password", "03") ?: "03"
+                
+                Timber.d("Using credentials - Login URL: $loginUrl, Employee: $empNumber")
                 
                 // Check if we have cached cookies and if they're still valid
                 val cachedCookies = prefs.getString("cached_cookies", null)
@@ -144,10 +146,14 @@ class PositionMonitorService : Service() {
                     // Use cached cookies
                     cookieHeader = cachedCookies
                     loginSuccess = true
-                    Timber.d("Using cached cookies (age: ${cookieAge / 1000}s)")
+                    Timber.d("Using cached cookies (age: ${cookieAge / 1000}s, valid for ${cookieValidDuration / 1000}s)")
                 } else {
                     // Need to login again
-                    Timber.d("Cached cookies expired or missing, logging in...")
+                    if (cachedCookies != null) {
+                        Timber.i("Cached cookies expired (age: ${cookieAge / 1000}s), logging in...")
+                    } else {
+                        Timber.i("No cached cookies found, logging in...")
+                    }
                     
                     // --- LOGIN LOGIC START ---
                     val loginRequestBody = okhttp3.FormBody.Builder()
@@ -158,6 +164,8 @@ class PositionMonitorService : Service() {
                         .url(loginUrl)
                         .post(loginRequestBody)
                         .build()
+                    
+                    Timber.d("Sending login request to: $loginUrl")
                     val loginResponse = client.newCall(loginRequest).execute()
                     val cookies = loginResponse.headers("Set-Cookie")
                     loginSuccess = cookies.isNotEmpty() && loginResponse.isSuccessful
@@ -170,9 +178,9 @@ class PositionMonitorService : Service() {
                             .putString("cached_cookies", cookieHeader)
                             .putLong("cookie_timestamp", currentTime)
                             .apply()
-                        Timber.d("Login successful, cookies cached")
+                        Timber.i("Login successful, cached ${cookies.size} cookies")
                     } else {
-                        Timber.e("Login failed: no cookies or bad response")
+                        Timber.e("Login failed: HTTP ${loginResponse.code}, cookies: ${cookies.size}")
                         android.os.Handler(mainLooper).post {
                             android.widget.Toast.makeText(this, "Login failed. Check credentials.", android.widget.Toast.LENGTH_LONG).show()
                         }
@@ -186,14 +194,16 @@ class PositionMonitorService : Service() {
                     .url(url)
                     .addHeader("Cookie", cookieHeader)
                     .build()
+                
+                Timber.d("Fetching position from: $url")
                 val response = client.newCall(positionRequest).execute()
 
                 if (!response.isSuccessful) {
-                    Timber.e("HTTP request failed: ${response.code}")
+                    Timber.e("HTTP request failed: ${response.code} for URL: $url")
                     
                     // If we get a 401/403, clear cached cookies and retry
                     if (response.code == 401 || response.code == 403) {
-                        Timber.d("Session expired, clearing cached cookies")
+                        Timber.w("Session expired (HTTP ${response.code}), clearing cached cookies")
                         prefs.edit()
                             .remove("cached_cookies")
                             .remove("cookie_timestamp")
@@ -211,15 +221,17 @@ class PositionMonitorService : Service() {
 
                 val html = response.body?.string() ?: ""
                 response.close()
+                
+                Timber.d("Received response (${html.length} characters)")
 
                 // Parse with Jsoup
                 val doc = Jsoup.parse(html)
                 val positionElement = doc.selectFirst(POSITION_SELECTOR)
                 val newPosition = positionElement?.text() ?: ""
-                Timber.d("Parsed position: $newPosition")
+                Timber.i("Parsed position: '$newPosition'")
 
                 if (positionElement == null) {
-                    Timber.e("Selector $POSITION_SELECTOR not found in HTML")
+                    Timber.e("Selector '$POSITION_SELECTOR' not found in HTML response")
                     android.os.Handler(mainLooper).post {
                         android.widget.Toast.makeText(this, "Could not find position on page.", android.widget.Toast.LENGTH_LONG).show()
                     }
@@ -233,18 +245,22 @@ class PositionMonitorService : Service() {
                     // Save new value
                     prefs.edit().putString("last_position", newPosition).apply()
                     showPositionChangeNotification("Position Update", "Position changed: $newPosition")
-                    Timber.d("Position changed from $lastPosition to $newPosition")
+                    Timber.i("Position changed from '$lastPosition' to '$newPosition'")
+                } else if (newPosition.isNotEmpty()) {
+                    Timber.d("Position unchanged: '$newPosition'")
                 } else {
-                    Timber.d("Position unchanged or empty.")
+                    Timber.w("Position element found but value is empty")
                 }
                 return // Success, exit retry loop
             } catch (e: Exception) {
-                Timber.e(e, "Error checking position (attempt ${attempt + 1})")
+                Timber.e(e, "Error checking position (attempt ${attempt + 1}/$maxAttempts)")
                 attempt++
                 if (attempt < maxAttempts) {
+                    Timber.i("Retrying in ${backoff}ms...")
                     delay(backoff)
                     backoff *= 2 // Exponential backoff
                 } else {
+                    Timber.e("Failed after $maxAttempts attempts, giving up")
                     android.os.Handler(mainLooper).post {
                         android.widget.Toast.makeText(this, "Failed after $maxAttempts attempts.", android.widget.Toast.LENGTH_LONG).show()
                     }
@@ -318,6 +334,8 @@ class PositionMonitorService : Service() {
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(1, notification)
+        
+        Timber.i("Position change notification sent: $title - $message")
     }
 
     private fun createNotificationChannel() {

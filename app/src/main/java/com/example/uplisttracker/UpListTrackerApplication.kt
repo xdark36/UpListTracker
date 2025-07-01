@@ -13,8 +13,15 @@ class UpListTrackerApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // Initialize Timber for logging
-        Timber.plant(Timber.DebugTree())
+        // Initialize logging
+        if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            Timber.plant(Timber.DebugTree())
+        } else {
+            // In production, you could plant a custom tree for crash reporting
+            // Timber.plant(CrashReportingTree())
+        }
+
+        Timber.i("UpListTracker application started")
 
         // Create notification channel once at app startup
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -30,3 +37,16 @@ class UpListTrackerApplication : Application() {
         }
     }
 }
+
+// Custom Timber tree for crash reporting (example for future implementation)
+/*
+class CrashReportingTree : Timber.Tree() {
+    override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
+        if (priority >= android.util.Log.WARN) {
+            // Send to crash reporting service (Firebase Crashlytics, Sentry, etc.)
+            // Example: FirebaseCrashlytics.getInstance().log("$tag: $message")
+            // if (t != null) FirebaseCrashlytics.getInstance().recordException(t)
+        }
+    }
+}
+*/

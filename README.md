@@ -11,13 +11,22 @@ UpListTracker is an Android application that monitors queue positions or sales r
 - **Push Notifications**: Sends high-priority notifications when position changes are detected
 - **Manual Refresh**: Pull-to-refresh functionality for immediate position checks
 - **Settings Management**: Runtime configuration of WiFi SSID, target URL, and polling intervals
+- **Session Management**: Automatic login credential caching and session renewal
 
 ### Technical Features
 - **Foreground Service**: Persistent monitoring that survives app backgrounding
-- **Session Management**: Handles login sessions for authenticated web pages
+- **Session Management**: Handles login sessions for authenticated web pages with cookie caching
 - **Retry Logic**: Exponential backoff for failed requests
 - **Status Indicators**: Visual feedback for monitoring state (Active/Paused/Offline)
 - **Accessibility Support**: Screen reader announcements for status changes
+- **Dark Mode Support**: Proper theming for both light and dark themes
+- **Structured Logging**: Comprehensive logging with Timber for debugging and monitoring
+
+### Security Features
+- **Configurable Credentials**: Login URL, employee number, and password stored in SharedPreferences
+- **Session Caching**: Reduces login overhead with 30-minute cookie caching
+- **Automatic Session Renewal**: Detects expired sessions and re-authenticates automatically
+- **Secure Storage**: No hard-coded credentials in source code
 
 ## Architecture
 
@@ -35,6 +44,8 @@ UpListTracker is an Android application that monitors queue positions or sales r
 - **Timber**: Advanced logging
 - **Material Components**: Modern UI components
 - **SwipeRefreshLayout**: Pull-to-refresh functionality
+- **Robolectric**: Android testing framework
+- **MockWebServer**: HTTP server mocking for tests
 
 ## Setup Instructions
 
@@ -72,6 +83,9 @@ UpListTracker is an Android application that monitors queue positions or sales r
 2. Tap the **Settings** button
 3. Configure the following:
    - **Store WiFi SSID**: The name of your store's WiFi network (default: "Sales")
+   - **Login URL**: The login page URL (default: "https://selling1.vcfcorp.com/")
+   - **Employee Number**: Your employee ID (default: "90045")
+   - **Password**: Your login password (default: "03")
    - **Position URL**: The web page URL to monitor (default: "https://selling.vcfcorp.com/")
    - **Polling Interval**: How often to check for changes (1-15 minutes)
    - **Real-time Monitoring**: Enable/disable continuous monitoring
@@ -93,6 +107,7 @@ The app looks for position data using the CSS selector `#position-element`. If y
 #### Manual Checks
 - **Pull-to-refresh**: Swipe down on the main screen for immediate position check
 - **Settings**: Tap the Settings button to modify configuration
+- **Clear Session**: Use "Clear Cached Session" in Settings to force re-login
 
 #### Monitoring States
 - **Active**: Monitoring is running and connected to store WiFi
@@ -110,6 +125,11 @@ app/src/main/java/com/example/uplisttracker/
 ├── PositionUtils.kt             # HTML parsing utilities
 ├── UpListTrackerApplication.kt  # Application class with Hilt setup
 └── ui/theme/                    # UI theming resources
+
+app/src/test/java/com/example/uplisttracker/
+├── PositionUtilsTest.kt         # HTML parsing tests
+├── AuthenticationTest.kt        # Login and session tests
+└── SharedPreferencesTest.kt     # Settings storage tests
 ```
 
 ### Key Files
@@ -120,9 +140,49 @@ app/src/main/java/com/example/uplisttracker/
 - **build.gradle**: Dependencies and build configuration
 
 ### Testing
-- **Unit Tests**: Located in `app/src/test/java/`
-- **Instrumentation Tests**: Located in `app/src/androidTest/java/`
-- **Manual Testing**: Use the pull-to-refresh feature for immediate testing
+
+#### Running Tests
+```bash
+# Run all unit tests
+./gradlew test
+
+# Run specific test class
+./gradlew test --tests PositionUtilsTest
+
+# Run with coverage
+./gradlew testDebugUnitTestCoverage
+```
+
+#### Test Coverage
+- **HTML Parsing**: Tests for various HTML structures and edge cases
+- **Authentication**: Login success/failure, session management, timeout handling
+- **Settings**: SharedPreferences storage and retrieval
+- **Network**: HTTP response codes, cookie handling, error scenarios
+
+#### Test Dependencies
+- **MockWebServer**: Simulates HTTP responses for testing
+- **Robolectric**: Android framework testing without emulator
+- **JUnit**: Core testing framework
+- **Kotlin Coroutines Test**: Async code testing
+
+### Logging and Debugging
+
+#### Structured Logging
+The app uses Timber for comprehensive logging:
+- **Debug builds**: Full logging to logcat
+- **Release builds**: Custom crash reporting tree (configurable)
+
+#### Key Log Messages
+- `Position changed from 'X' to 'Y'`
+- `Login successful, cached X cookies`
+- `Session expired, clearing cached cookies`
+- `Using cached cookies (age: Xs)`
+
+#### Debug Information
+- Enable Timber logging for detailed debug information
+- Check logcat for service and network-related errors
+- Verify WiFi SSID configuration matches exactly
+- Monitor session cookie expiration and renewal
 
 ## Permissions
 
@@ -137,17 +197,51 @@ The app requires the following permissions:
 
 ### Common Issues
 1. **"Not on store WiFi"**: Ensure you're connected to the configured WiFi network
-2. **"Login failed"**: Check credentials in `PositionMonitorService.kt`
+2. **"Login failed"**: Check credentials in Settings
 3. **"Selector not found"**: Verify the CSS selector matches your target page
-4. **Notifications not showing**: Grant notification permissions in app settings
+4. **"Session expired"**: Use "Clear Cached Session" in Settings
+5. **Notifications not showing**: Grant notification permissions in app settings
 
 ### Debug Information
 - Enable Timber logging for detailed debug information
 - Check logcat for service and network-related errors
 - Verify WiFi SSID configuration matches exactly
+- Monitor session cookie expiration and renewal
+
+### Performance Optimization
+- Session cookies are cached for 30 minutes to reduce login overhead
+- Exponential backoff for failed requests prevents server overload
+- Foreground service ensures reliable background monitoring
+
+## Contributing
+
+### Development Setup
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass
+6. Submit a pull request
+
+### Code Style
+- Follow Kotlin coding conventions
+- Use meaningful variable and function names
+- Add comments for complex logic
+- Include unit tests for new features
 
 ## License
 [Add your license information here]
 
-## Contributing
-[Add contribution guidelines here] 
+## Changelog
+
+### Version 1.0
+- Initial release with basic position monitoring
+- Foreground service implementation
+- WiFi-based activation
+- Push notifications for position changes
+- Settings management
+- Session caching and management
+- Comprehensive automated testing
+- Dark mode support
+- Accessibility improvements
+- Structured logging with Timber 

@@ -298,9 +298,15 @@ class MainActivity : ComponentActivity() {
             bannerText.setBackgroundColor(if (success) 0xFFB9F6CA.toInt() else 0xFFFFEB3B.toInt())
             bannerText.setTextColor(0xFF000000.toInt())
             bannerText.isVisible = true
+            bannerText.contentDescription = "Status: $message"
             bannerText.sendAccessibilityEvent(AccessibilityEvent.TYPE_ANNOUNCEMENT)
+            
+            // Animate in
+            bannerText.alpha = 0f
             bannerText.animate().alpha(1f).setDuration(200).withEndAction {
+                // Auto-hide after delay, but don't interfere with swipe refresh
                 bannerText.postDelayed({
+                    if (!bannerText.isVisible) return@postDelayed // Already hidden
                     bannerText.animate().alpha(0f).setDuration(400).withEndAction {
                         bannerText.isVisible = false
                         bannerText.alpha = 1f
