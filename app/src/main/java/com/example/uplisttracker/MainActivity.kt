@@ -28,16 +28,31 @@ import android.widget.Toast
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.content.ContextCompat
+import androidx.activity.result.contract.ActivityResultContracts
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private enum class MonitorState { ACTIVE, PAUSED, OFFLINE }
+
+    // Permission launcher for POST_NOTIFICATIONS (Android 13+)
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            Toast.makeText(this, "Notification permission granted", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Notification permission denied", Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         setContentView(R.layout.activity_main)
+        
+        // Check and request notification permission for Android 13+
+        checkNotificationPermission()
         
         // Check if monitoring should be started (don't auto-start on launch)
         val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
@@ -294,7 +309,9 @@ class MainActivity : ComponentActivity() {
 
     private fun showBanner(bannerText: TextView, message: String, success: Boolean) {
         runOnUiThread {
-            bannerText.text = message
+            val timestamp = getTimestamp()
+            val bannerMessage = "$message\nLast checked at $timestamp"
+            bannerText.text = bannerMessage
             bannerText.setBackgroundColor(if (success) 0xFFB9F6CA.toInt() else 0xFFFFEB3B.toInt())
             bannerText.setTextColor(0xFF000000.toInt())
             bannerText.isVisible = true
@@ -311,7 +328,7 @@ class MainActivity : ComponentActivity() {
                         bannerText.isVisible = false
                         bannerText.alpha = 1f
                     }
-                }, 2000)
+                }, 3000) // Increased delay to allow reading timestamp
             }
         }
     }
@@ -338,5 +355,28 @@ class MainActivity : ComponentActivity() {
             }
         }
         statusText.sendAccessibilityEvent(android.view.accessibility.AccessibilityEvent.TYPE_ANNOUNCEMENT)
+    }
+    
+    private fun checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
+                    // Permission already granted
+                    android.util.Log.d("MainActivity", "POST_NOTIFICATIONS permission already granted")
+                }
+                shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS) -> {
+                    // Show rationale and request permission
+                    Toast.makeText(this, "Notification permission is needed for position alerts", Toast.LENGTH_LONG).show()
+                    requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+                else -> {
+                    // Request permission directly
+                    requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        }
     }
 }

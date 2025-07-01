@@ -100,6 +100,18 @@ class SettingsActivity : AppCompatActivity() {
         intervalPicker.value = savedInterval
         layout.addView(intervalPicker)
         
+        // Add a label to show the current interval value
+        val intervalValueLabel = TextView(this)
+        intervalValueLabel.text = "Current: ${savedInterval} minute${if (savedInterval > 1) "s" else ""}"
+        intervalValueLabel.textSize = 14f
+        intervalValueLabel.setPadding(0, 8, 0, 16)
+        layout.addView(intervalValueLabel)
+        
+        // Update the label when picker value changes
+        intervalPicker.setOnValueChangedListener { _, _, newVal ->
+            intervalValueLabel.text = "Current: $newVal minute${if (newVal > 1) "s" else ""}"
+        }
+        
         // Save Button
         val saveButton = Button(this)
         saveButton.text = "Save Settings"
