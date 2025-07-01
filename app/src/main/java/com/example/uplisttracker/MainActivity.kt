@@ -34,6 +34,8 @@ import android.content.pm.PackageManager
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.collectLatest
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -68,15 +70,6 @@ class MainActivity : ComponentActivity() {
     ) { isGranted: Boolean ->
         if (!isGranted) {
             Toast.makeText(this, "Notification permission required for alerts", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    // Register a receiver for position updates
-    private val positionUpdateReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            val newPosition = intent?.getStringExtra("new_position") ?: return
-            val bannerText = findViewById<TextView>(R.id.bannerText)
-            showBanner(bannerText, "Position updated: $newPosition", true)
         }
     }
 
@@ -169,16 +162,16 @@ class MainActivity : ComponentActivity() {
             android.widget.Toast.makeText(this, "Error initializing app: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
         }
 
-        // Register a receiver for position updates
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            positionUpdateReceiver,
-            IntentFilter("com.example.uplisttracker.POSITION_UPDATE")
-        )
+        lifecycleScope.launch {
+            PositionRepository.position.collectLatest { newPosition ->
+                val bannerText = findViewById<TextView>(R.id.bannerText)
+                showBanner(bannerText, "Position updated: $newPosition", true)
+            }
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(positionUpdateReceiver)
     }
 
     private fun extractPosition(html: String): String {

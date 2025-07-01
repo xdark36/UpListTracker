@@ -253,9 +253,7 @@ class PositionMonitorService : Service() {
                     prefs.edit().putString("last_position", newPosition).apply()
                     showPositionChangeNotification("Position Update", "Position changed: $newPosition")
                     Timber.i("Position changed from '$lastPosition' to '$newPosition'")
-                    val broadcastIntent = Intent("com.example.uplisttracker.POSITION_UPDATE")
-                    broadcastIntent.putExtra("new_position", newPosition)
-                    LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent)
+                    PositionRepository.updatePosition(newPosition)
                 } else if (newPosition.isNotEmpty()) {
                     Timber.d("Position unchanged: '$newPosition'")
                 } else {

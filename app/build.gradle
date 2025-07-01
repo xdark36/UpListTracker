@@ -83,7 +83,4 @@ dependencies {
 
     // SwipeRefreshLayout (updated)
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
-
-    // LocalBroadcastManager
-    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
 }

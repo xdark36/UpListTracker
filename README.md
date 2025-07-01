@@ -193,8 +193,8 @@ The app uses Timber for comprehensive logging:
 - The app requests `ACCESS_FINE_LOCATION` at runtime before starting monitoring, with a rationale toast if needed.
 
 ## Live Banner Updates
-- When the app is open, the banner updates live from background fetches via a local broadcast (using `LocalBroadcastManager`).
-- Note: `LocalBroadcastManager` is deprecated but used here for compatibility and simplicity.
+- The app now uses Kotlin StateFlow for instant, lifecycle-aware in-app updates between the service and activity.
+- LocalBroadcastManager is no longer used.
 
 ## Session & Cookie Management
 
