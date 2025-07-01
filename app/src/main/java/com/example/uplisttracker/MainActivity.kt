@@ -30,7 +30,10 @@ import android.view.accessibility.AccessibilityEvent
 import androidx.core.content.ContextCompat
 import androidx.activity.result.contract.ActivityResultContracts
 import android.Manifest
-import androidx.core.app.ActivityCompat
+import android.content.pm.PackageManager
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -51,8 +54,12 @@ class MainActivity : ComponentActivity() {
     private val requestLocationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
-        if (!isGranted) {
-            Toast.makeText(this, "Location permission required for WiFi check", Toast.LENGTH_LONG).show()
+        if (isGranted) {
+            val intent = Intent(this, PositionMonitorService::class.java)
+            intent.action = PositionMonitorService.ACTION_START
+            ContextCompat.startForegroundService(this, intent)
+        } else {
+            Toast.makeText(this, "Location permission is required to monitor Wi-Fi.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -61,6 +68,15 @@ class MainActivity : ComponentActivity() {
     ) { isGranted: Boolean ->
         if (!isGranted) {
             Toast.makeText(this, "Notification permission required for alerts", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // Register a receiver for position updates
+    private val positionUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val newPosition = intent?.getStringExtra("new_position") ?: return
+            val bannerText = findViewById<TextView>(R.id.bannerText)
+            showBanner(bannerText, "Position updated: $newPosition", true)
         }
     }
 
@@ -84,11 +100,7 @@ class MainActivity : ComponentActivity() {
         val monitoringEnabled = prefs.getBoolean("monitoring_active", false)
         
         if (monitoringEnabled) {
-            // Start the foreground service for monitoring
-            Intent(this, PositionMonitorService::class.java).also { intent ->
-                intent.action = PositionMonitorService.ACTION_START
-                androidx.core.content.ContextCompat.startForegroundService(this, intent)
-            }
+            startMonitoringServiceWithPermissionCheck()
         }
         
         try {
@@ -156,6 +168,17 @@ class MainActivity : ComponentActivity() {
             android.util.Log.e("MainActivity", "Error initializing UI: ${e.message}", e)
             android.widget.Toast.makeText(this, "Error initializing app: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
         }
+
+        // Register a receiver for position updates
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            positionUpdateReceiver,
+            IntentFilter("com.example.uplisttracker.POSITION_UPDATE")
+        )
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(positionUpdateReceiver)
     }
 
     private fun extractPosition(html: String): String {
@@ -368,5 +391,19 @@ class MainActivity : ComponentActivity() {
         return ContextCompat.checkSelfPermission(
             this, Manifest.permission.ACCESS_FINE_LOCATION
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun startMonitoringServiceWithPermissionCheck() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED) {
+            val intent = Intent(this, PositionMonitorService::class.java)
+            intent.action = PositionMonitorService.ACTION_START
+            ContextCompat.startForegroundService(this, intent)
+        } else {
+            if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                Toast.makeText(this, "Location permission is needed to check Wi-Fi SSID.", Toast.LENGTH_LONG).show()
+            }
+            requestLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
     }
 }

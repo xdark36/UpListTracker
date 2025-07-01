@@ -184,14 +184,17 @@ The app uses Timber for comprehensive logging:
 - Verify WiFi SSID configuration matches exactly
 - Monitor session cookie expiration and renewal
 
-## Permissions
+## Notification Channels
+- The app creates two notification channels on startup:
+  - `up_chan`: High-importance alerts for position changes.
+  - `position_monitor`: Low-importance status for ongoing monitoring.
 
-- `INTERNET`: Required for network access to fetch queue/sales position.
-- `ACCESS_WIFI_STATE`, `ACCESS_NETWORK_STATE`: Required to check if the device is on the correct store WiFi.
-- `FOREGROUND_SERVICE`: Required for real-time monitoring in the background.
-- `POST_NOTIFICATIONS`: Required for sending notifications (Android 13+).
-- `RECEIVE_BOOT_COMPLETED`: Allows the app to auto-restart monitoring after device reboot (if enabled in settings).
-- `ACCESS_FINE_LOCATION`: **Required on Android 9+** to read the current WiFi SSID. The app requests this permission at runtime. If denied, monitoring is paused and a banner is shown.
+## Permissions
+- The app requests `ACCESS_FINE_LOCATION` at runtime before starting monitoring, with a rationale toast if needed.
+
+## Live Banner Updates
+- When the app is open, the banner updates live from background fetches via a local broadcast (using `LocalBroadcastManager`).
+- Note: `LocalBroadcastManager` is deprecated but used here for compatibility and simplicity.
 
 ## Session & Cookie Management
 

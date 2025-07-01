@@ -26,6 +26,7 @@ import java.net.CookieManager
 import java.net.CookiePolicy
 import java.util.concurrent.TimeUnit
 import android.Manifest
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
 class PositionMonitorService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + Job())
@@ -246,6 +247,9 @@ class PositionMonitorService : Service() {
                     prefs.edit().putString("last_position", newPosition).apply()
                     showPositionChangeNotification("Position Update", "Position changed: $newPosition")
                     Timber.i("Position changed from '$lastPosition' to '$newPosition'")
+                    val broadcastIntent = Intent("com.example.uplisttracker.POSITION_UPDATE")
+                    broadcastIntent.putExtra("new_position", newPosition)
+                    LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent)
                 } else if (newPosition.isNotEmpty()) {
                     Timber.d("Position unchanged: '$newPosition'")
                 } else {

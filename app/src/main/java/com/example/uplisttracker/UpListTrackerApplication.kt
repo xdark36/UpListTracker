@@ -25,24 +25,23 @@ class UpListTrackerApplication : Application() {
 
         // Create notification channel once at app startup
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                "up_chan",
-                "Up Position Alerts",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Notifications for position tracking updates"
-            }
             val mgr = getSystemService(NotificationManager::class.java)
-            mgr.createNotificationChannel(channel)
-
-            val positionChannel = NotificationChannel(
-                "position_changes",
-                "Position Updates",
+            val upChan = NotificationChannel(
+                "up_chan",
+                "Position Alerts",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notifications for position updates"
+                description = "Alerts when position changes"
             }
-            mgr.createNotificationChannel(positionChannel)
+            mgr.createNotificationChannel(upChan)
+            val monitorChan = NotificationChannel(
+                "position_monitor",
+                "Monitoring Status",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Shows when position monitoring is active"
+            }
+            mgr.createNotificationChannel(monitorChan)
         }
     }
 }
