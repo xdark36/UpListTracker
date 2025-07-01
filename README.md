@@ -260,4 +260,8 @@ The app uses Timber for comprehensive logging:
 - **Manifest & Application ID**: Ensured correct manifest formatting and applicationId quoting in build.gradle.
 - **Polling Interval Picker**: The Settings screen now features a NumberPicker with a live-updating label showing the current interval in minutes.
 - **Banner Timestamp**: The banner now displays a "Last checked at..." timestamp for better user feedback.
-- **Android 13+ Notification Permission**: The app now requests the POST_NOTIFICATIONS permission at runtime on Android 13+ devices, ensuring notifications work as expected. 
+- **Android 13+ Notification Permission**: The app now requests the POST_NOTIFICATIONS permission at runtime on Android 13+ devices, ensuring notifications work as expected.
+
+## Wi-Fi SSID Robustness
+
+- If your device returns `SSID_UNKNOWN` or `<unknown ssid>` (common on some Android devices), the app will now retry after a short delay instead of immediately going offline. If this state persists, a warning banner is shown in the app. 

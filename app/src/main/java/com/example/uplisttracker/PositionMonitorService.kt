@@ -187,12 +187,22 @@ class PositionMonitorService : Service() {
                 val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                 val info = wifiManager.connectionInfo
                 val currentSsid = info.ssid?.replace("\"", "")
+                if (currentSsid.equals("SSID_UNKNOWN", true) || currentSsid.equals("<unknown ssid>", true)) {
+                    Timber.w("WiFi SSID is unknown, retrying...")
+                    Thread.sleep(1500)
+                    return false
+                }
                 return currentSsid == storeSsid
             }
         } else {
             val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
             val info = wifiManager.connectionInfo
             val currentSsid = info.ssid?.replace("\"", "")
+            if (currentSsid.equals("SSID_UNKNOWN", true) || currentSsid.equals("<unknown ssid>", true)) {
+                Timber.w("WiFi SSID is unknown, retrying...")
+                Thread.sleep(1500)
+                return false
+            }
             return currentSsid == storeSsid
         }
         return false

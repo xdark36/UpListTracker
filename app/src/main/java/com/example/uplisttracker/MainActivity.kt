@@ -241,12 +241,30 @@ class MainActivity : ComponentActivity() {
                 val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                 val info = wifiManager.connectionInfo
                 val currentSsid = info.ssid?.replace("\"", "")
+                if (currentSsid.equals("SSID_UNKNOWN", true) || currentSsid.equals("<unknown ssid>", true)) {
+                    android.util.Log.w("MainActivity", "WiFi SSID is unknown, retrying...")
+                    runOnUiThread {
+                        val bannerText = findViewById<TextView>(R.id.bannerText)
+                        showBanner(bannerText, "WiFi SSID unknown, retrying...", false)
+                    }
+                    Thread.sleep(1500) // Wait and let caller retry
+                    return false
+                }
                 return currentSsid == storeSsid
             }
         } else {
             val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
             val info = wifiManager.connectionInfo
             val currentSsid = info.ssid?.replace("\"", "")
+            if (currentSsid.equals("SSID_UNKNOWN", true) || currentSsid.equals("<unknown ssid>", true)) {
+                android.util.Log.w("MainActivity", "WiFi SSID is unknown, retrying...")
+                runOnUiThread {
+                    val bannerText = findViewById<TextView>(R.id.bannerText)
+                    showBanner(bannerText, "WiFi SSID unknown, retrying...", false)
+                }
+                Thread.sleep(1500)
+                return false
+            }
             return currentSsid == storeSsid
         }
         return false
