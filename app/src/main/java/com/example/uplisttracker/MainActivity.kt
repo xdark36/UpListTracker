@@ -115,10 +115,11 @@ class MainActivity : ComponentActivity() {
             val copyButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.copyButton)
             val shareButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.shareButton)
             val refreshButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.refreshButton)
+            val historyButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.historyButton)
             
             if (swipeRefreshLayout == null || bannerText == null || progressBar == null || 
                 positionTextView == null || statusText == null || settingsButton == null || 
-                copyButton == null || shareButton == null || refreshButton == null) {
+                copyButton == null || shareButton == null || refreshButton == null || historyButton == null) {
                 throw Exception("One or more UI elements not found")
             }
             
@@ -179,6 +180,11 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 )
+            }
+
+            // History button
+            historyButton.setOnClickListener {
+                showPositionHistory()
             }
 
             // True pull-to-refresh
@@ -446,8 +452,54 @@ class MainActivity : ComponentActivity() {
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
-    private fun updatePositionDisplay(positionTextView: TextView, position: String, lastChecked: String) {
-        positionTextView.text = "Position: $position\nLast checked: $lastChecked"
+    private fun updatePositionDisplay(positionTextView: TextView, position: String?, lastChecked: String?) {
+        val displayText = if (position == null || position == "--") {
+            "Position: --"
+        } else {
+            "Position: $position"
+        }
+        positionTextView.text = displayText
+        
+        // Store position in history
+        storePositionInHistory(position ?: "--")
+    }
+
+    private fun storePositionInHistory(position: String) {
+        val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
+        val historyKey = "position_history"
+        val timestampKey = "position_timestamps"
+        
+        // Get existing history
+        val history = prefs.getString(historyKey, "")?.split(",")?.filter { it.isNotEmpty() }?.toMutableList() ?: mutableListOf()
+        val timestamps = prefs.getString(timestampKey, "")?.split(",")?.filter { it.isNotEmpty() }?.toMutableList() ?: mutableListOf()
+        
+        // Add new position and timestamp
+        history.add(position)
+        timestamps.add(System.currentTimeMillis().toString())
+        
+        // Keep only last 10 entries
+        if (history.size > 10) {
+            history.removeAt(0)
+            timestamps.removeAt(0)
+        }
+        
+        // Save back to preferences
+        prefs.edit()
+            .putString(historyKey, history.joinToString(","))
+            .putString(timestampKey, timestamps.joinToString(","))
+            .apply()
+    }
+
+    private fun getPositionHistory(): List<Pair<String, String>> {
+        val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
+        val history = prefs.getString("position_history", "")?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
+        val timestamps = prefs.getString("position_timestamps", "")?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
+        
+        return history.zip(timestamps).map { (position, timestamp) ->
+            val date = Date(timestamp.toLongOrNull() ?: 0)
+            val timeString = SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
+            position to timeString
+        }.reversed() // Most recent first
     }
 
     private fun provideHapticFeedback() {
@@ -490,5 +542,39 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, "Error sharing position: ${e.message}", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun showPositionHistory() {
+        val history = getPositionHistory()
+        if (history.isEmpty()) {
+            Toast.makeText(this, "No position history available", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val builder = StringBuilder()
+        builder.append("Last ${history.size} position changes:\n\n")
+        
+        for ((position, timestamp) in history) {
+            builder.append("$position at $timestamp\n")
+        }
+        
+        val dialog = android.app.AlertDialog.Builder(this)
+            .setTitle("Position History")
+            .setMessage(builder.toString())
+            .setPositiveButton("OK") { _, _ -> }
+            .setNeutralButton("Clear History") { _, _ ->
+                clearPositionHistory()
+                Toast.makeText(this, "History cleared", Toast.LENGTH_SHORT).show()
+            }
+            .create()
+        dialog.show()
+    }
+
+    private fun clearPositionHistory() {
+        val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
+        prefs.edit()
+            .remove("position_history")
+            .remove("position_timestamps")
+            .apply()
     }
 }
