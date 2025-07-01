@@ -138,7 +138,8 @@ class SettingsActivity : AppCompatActivity() {
         loginUrlInput.setText(prefs.getString("login_url", "https://selling1.vcfcorp.com/"))
         empNumberInput.setText(prefs.getString("emp_number", "90045"))
         passwordInput.setText(prefs.getString("user_password", "03"))
-        urlInput.setText(prefs.getString("url", "https://selling.vcfcorp.com/"))
+        val defaultUrl = "https://selling1.vcfcorp.com/position"
+        urlInput.setText(prefs.getString("url", defaultUrl))
         
         // Check if monitoring is currently active
         val isMonitoringActive = prefs.getBoolean("monitoring_active", false)

@@ -89,8 +89,14 @@ class PositionMonitorService : Service() {
             networkCallback = object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
                     Timber.i("Network available, resuming monitoring")
-                    if (isMonitoring) {
-                        scope.launch { checkPositionChange(getUrlFromPrefs()) }
+                    val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
+                    val storeSsid = prefs.getString("ssid", "Sales") ?: "Sales"
+                    if (isOnStoreWifi(this@PositionMonitorService, storeSsid)) {
+                        if (isMonitoring) {
+                            scope.launch { checkPositionChange(getUrlFromPrefs()) }
+                        }
+                    } else {
+                        Timber.i("Network available but not on store WiFi (SSID: $storeSsid)")
                     }
                 }
 
@@ -310,7 +316,7 @@ class PositionMonitorService : Service() {
 
     private fun getUrlFromPrefs(): String {
         val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
-        return prefs.getString("url", "https://selling.vcfcorp.com/") ?: "https://selling.vcfcorp.com/"
+        return prefs.getString("url", "https://selling1.vcfcorp.com/position") ?: "https://selling1.vcfcorp.com/position"
     }
 
     private fun showPositionChangeNotification(title: String, message: String) {
