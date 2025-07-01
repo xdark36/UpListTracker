@@ -149,7 +149,7 @@ class PositionMonitorService : Service() {
 
     private fun startForegroundMonitoring() {
         isMonitoring = true
-        startForeground(NOTIFICATION_ID, buildMonitoringNotification())
+        startForeground(NOTIFICATION_ID, createNotification())
         
         scope.launch {
             while (isActive && isMonitoring) {
@@ -274,25 +274,32 @@ class PositionMonitorService : Service() {
         }
     }
 
-    private fun buildMonitoringNotification(): Notification {
-        val pauseIntent = PendingIntent.getService(this, 1, Intent(this, PositionMonitorService::class.java).apply {
-            action = ACTION_PAUSE
-        }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val refreshIntent = PendingIntent.getService(this, 2, Intent(this, PositionMonitorService::class.java).apply {
+    private fun createNotification(): Notification {
+        val intent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        
+        val restartIntent = Intent(this, PositionMonitorService::class.java).apply {
             action = ACTION_REFRESH
-        }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val stopIntent = PendingIntent.getService(this, 4, Intent(this, PositionMonitorService::class.java).apply {
+        }
+        val restartPendingIntent = PendingIntent.getService(this, 1, restartIntent, PendingIntent.FLAG_IMMUTABLE)
+        
+        val stopIntent = Intent(this, PositionMonitorService::class.java).apply {
             action = ACTION_STOP
-        }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        }
+        val stopPendingIntent = PendingIntent.getService(this, 2, stopIntent, PendingIntent.FLAG_IMMUTABLE)
+        
+        val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
+        val lastPosition = prefs.getString("last_position", "--")
+        val lastChecked = prefs.getString("last_checked", "Never")
+        
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Position Monitor")
-            .setContentText("Monitoring queue position...")
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setContentTitle("Position Monitor Active")
+            .setContentText("Current: $lastPosition • Last checked: $lastChecked")
+            .setSmallIcon(R.drawable.ic_check_circle)
+            .setContentIntent(pendingIntent)
+            .addAction(R.drawable.ic_refresh, "Restart", restartPendingIntent)
+            .addAction(R.drawable.ic_stop_circle, "Stop", stopPendingIntent)
             .setOngoing(true)
-            .addAction(R.drawable.ic_pause_circle, "Pause", pauseIntent)
-            .addAction(R.drawable.ic_refresh, "Refresh", refreshIntent)
-            .addAction(R.drawable.ic_stop_circle, "Stop", stopIntent)
             .build()
     }
 
@@ -333,9 +340,10 @@ class PositionMonitorService : Service() {
             }
         }
 
+        val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
         val notification = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
             .setContentTitle(title)
-            .setContentText(message)
+            .setContentText("$message\nLast checked: $timestamp")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)

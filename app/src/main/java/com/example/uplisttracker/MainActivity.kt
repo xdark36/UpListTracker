@@ -36,10 +36,17 @@ import android.content.IntentFilter
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
+import com.google.android.material.snackbar.Snackbar
+import androidx.activity.viewModels
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private enum class MonitorState { ACTIVE, PAUSED, OFFLINE }
+    private val viewModel: MainViewModel by viewModels()
+    sealed class MonitorState {
+        object Active : MonitorState()
+        object Paused : MonitorState()
+        object Offline : MonitorState()
+    }
 
     // Permission launcher for POST_NOTIFICATIONS (Android 13+)
     private val requestPermissionLauncher = registerForActivityResult(
@@ -76,7 +83,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
         setContentView(R.layout.activity_main)
         
         // Request permissions on startup
@@ -97,65 +103,75 @@ class MainActivity : ComponentActivity() {
         }
         
         try {
-            val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.swipeRefreshLayout)
+            val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.root_layout)
             val bannerText = findViewById<TextView>(R.id.bannerText)
             val progressBar = findViewById<ProgressBar>(R.id.progressBar)
             val positionTextView = findViewById<TextView>(R.id.positionText)
             val statusText = findViewById<TextView>(R.id.statusText)
             val settingsButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.settingsButton)
+            val copyButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.copyButton)
             
             if (swipeRefreshLayout == null || bannerText == null || progressBar == null || 
-                positionTextView == null || statusText == null || settingsButton == null) {
+                positionTextView == null || statusText == null || settingsButton == null || copyButton == null) {
                 throw Exception("One or more UI elements not found")
             }
             
             val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
-        // Initial display
-        val lastPosition = prefs.getString("last_position", "--")
-        positionTextView.text = "Position: $lastPosition"
-        updateStatusIndicator(statusText, MonitorState.ACTIVE)
-        // Listen for changes
-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == "last_position") {
-                val newPosition = prefs.getString("last_position", "--")
-                runOnUiThread {
-                    positionTextView.text = "Position: $newPosition"
-                    showBanner(bannerText, "Position updated!", success = true)
-                }
-            }
-        }
-        prefs.registerOnSharedPreferenceChangeListener(listener)
-
-        // Settings button
-        settingsButton.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
-        }
-
-        // True pull-to-refresh
-        swipeRefreshLayout.setOnRefreshListener {
-            fetchAndDisplayPosition(
-                onSuccess = {
-                    swipeRefreshLayout.isRefreshing = false
-                    showBanner(bannerText, "Refreshed!", success = true)
-                    updateStatusIndicator(statusText, MonitorState.ACTIVE)
-                },
-                onError = { msg ->
-                    swipeRefreshLayout.isRefreshing = false
-                    showBanner(bannerText, msg, success = false)
-                    if (msg.contains("Offline", true)) {
-                        updateStatusIndicator(statusText, MonitorState.OFFLINE)
-                    } else {
-                        updateStatusIndicator(statusText, MonitorState.PAUSED)
+            // Initial display
+            val lastPosition = prefs.getString("last_position", "--")
+            positionTextView.text = "Position: $lastPosition"
+            updateStatusIndicator(statusText, MonitorState.Active)
+            // Listen for changes
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                if (key == "last_position") {
+                    val newPosition = prefs.getString("last_position", "--")
+                    runOnUiThread {
+                        positionTextView.text = "Position: $newPosition"
+                        showBanner(bannerText, "Position updated!", success = true)
                     }
                 }
-            )
-        }
+            }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
 
-        // Initial Wi-Fi check for status
-        val ssid = prefs.getString("ssid", "Sales") ?: "Sales"
-        if (!isOnStoreWifi(this, ssid)) {
-            updateStatusIndicator(statusText, MonitorState.OFFLINE)
-        }
+            // Settings button
+            settingsButton.setOnClickListener {
+                startActivity(Intent(this, SettingsActivity::class.java))
+            }
+
+            // Copy button
+            copyButton.setOnClickListener {
+                val position = prefs.getString("last_position", "--")
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val clip = android.content.ClipData.newPlainText("Position", position)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, "Position copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
+
+            // True pull-to-refresh
+            swipeRefreshLayout.setOnRefreshListener {
+                fetchAndDisplayPosition(
+                    onSuccess = {
+                        swipeRefreshLayout.isRefreshing = false
+                        showBanner(bannerText, "Refreshed!", success = true)
+                        updateStatusIndicator(statusText, MonitorState.Active)
+                    },
+                    onError = { msg ->
+                        swipeRefreshLayout.isRefreshing = false
+                        showBanner(bannerText, msg, success = false)
+                        if (msg.contains("Offline", true)) {
+                            updateStatusIndicator(statusText, MonitorState.Offline)
+                        } else {
+                            updateStatusIndicator(statusText, MonitorState.Paused)
+                        }
+                    }
+                )
+            }
+
+            // Initial Wi-Fi check for status
+            val ssid = prefs.getString("ssid", "Sales") ?: "Sales"
+            if (!isOnStoreWifi(this, ssid)) {
+                updateStatusIndicator(statusText, MonitorState.Offline)
+            }
         } catch (e: Exception) {
             // Log the error and show a simple error message
             android.util.Log.e("MainActivity", "Error initializing UI: ${e.message}", e)
@@ -255,12 +271,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun isOnStoreWifi(context: Context, storeSsid: String): Boolean {
+    private fun startMonitoringServiceWithPermissionCheck() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !hasLocationPermission()) {
-            return false // Will trigger permission request
+            requestLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        } else {
+            val intent = Intent(this, PositionMonitorService::class.java)
+            intent.action = PositionMonitorService.ACTION_START
+            ContextCompat.startForegroundService(this, intent)
         }
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    }
+
+    private fun isOnStoreWifi(context: Context, storeSsid: String): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             val network = connectivityManager.activeNetwork ?: return false
             val networkCapabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
             if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
@@ -273,7 +296,7 @@ class MainActivity : ComponentActivity() {
                         val bannerText = findViewById<TextView>(R.id.bannerText)
                         showBanner(bannerText, "WiFi SSID unknown, retrying...", false)
                     }
-                    Thread.sleep(1500) // Wait and let caller retry
+                    Thread.sleep(1500)
                     return false
                 }
                 return currentSsid == storeSsid
@@ -309,45 +332,35 @@ class MainActivity : ComponentActivity() {
 
     private fun showBanner(bannerText: TextView, message: String, success: Boolean) {
         runOnUiThread {
-            val timestamp = getTimestamp()
-            val bannerMessage = "$message\nLast checked at $timestamp"
-            bannerText.text = bannerMessage
-            bannerText.setBackgroundColor(if (success) 0xFFB9F6CA.toInt() else 0xFFFFEB3B.toInt())
-            bannerText.setTextColor(0xFF000000.toInt())
-            bannerText.isVisible = true
-            bannerText.contentDescription = "Status: $message"
-            bannerText.sendAccessibilityEvent(AccessibilityEvent.TYPE_ANNOUNCEMENT)
-            
-            // Animate in
-            bannerText.alpha = 0f
-            bannerText.animate().alpha(1f).setDuration(200).withEndAction {
-                // Auto-hide after delay, but don't interfere with swipe refresh
-                bannerText.postDelayed({
-                    if (!bannerText.isVisible) return@postDelayed // Already hidden
-                    bannerText.animate().alpha(0f).setDuration(400).withEndAction {
-                        bannerText.isVisible = false
-                        bannerText.alpha = 1f
-                    }
-                }, 3000) // Increased delay to allow reading timestamp
+            val rootView = findViewById<androidx.coordinatorlayout.widget.CoordinatorLayout?>(R.id.root_layout)
+            if (rootView != null) {
+                Snackbar.make(rootView, message, Snackbar.LENGTH_LONG).show()
+            } else {
+                bannerText.text = message
+                bannerText.setBackgroundColor(if (success) 0xFFB9F6CA.toInt() else 0xFFFFEB3B.toInt())
+                bannerText.setTextColor(0xFF000000.toInt())
+                bannerText.isVisible = true
+                bannerText.contentDescription = "Status: $message"
+                bannerText.sendAccessibilityEvent(AccessibilityEvent.TYPE_ANNOUNCEMENT)
             }
         }
     }
 
     private fun updateStatusIndicator(statusText: TextView, state: MonitorState) {
         when (state) {
-            MonitorState.ACTIVE -> {
+            MonitorState.Active -> {
                 statusText.text = "Monitoring: Active"
                 statusText.setTextColor(ContextCompat.getColor(this, R.color.status_active))
                 statusText.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_check_circle, 0, 0, 0)
                 statusText.contentDescription = "Monitoring is active"
             }
-            MonitorState.PAUSED -> {
+            MonitorState.Paused -> {
                 statusText.text = "Monitoring: Paused"
                 statusText.setTextColor(ContextCompat.getColor(this, R.color.status_paused))
                 statusText.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_pause_circle, 0, 0, 0)
                 statusText.contentDescription = "Monitoring is paused"
             }
-            MonitorState.OFFLINE -> {
+            MonitorState.Offline -> {
                 statusText.text = "Monitoring: Offline"
                 statusText.setTextColor(ContextCompat.getColor(this, R.color.status_offline))
                 statusText.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_pause_circle, 0, 0, 0)
@@ -384,19 +397,5 @@ class MainActivity : ComponentActivity() {
         return ContextCompat.checkSelfPermission(
             this, Manifest.permission.ACCESS_FINE_LOCATION
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-    }
-
-    private fun startMonitoringServiceWithPermissionCheck() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            == PackageManager.PERMISSION_GRANTED) {
-            val intent = Intent(this, PositionMonitorService::class.java)
-            intent.action = PositionMonitorService.ACTION_START
-            ContextCompat.startForegroundService(this, intent)
-        } else {
-            if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                Toast.makeText(this, "Location permission is needed to check Wi-Fi SSID.", Toast.LENGTH_LONG).show()
-            }
-            requestLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
     }
 }

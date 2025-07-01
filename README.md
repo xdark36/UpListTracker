@@ -1,40 +1,44 @@
 # UpListTracker
 
-## Overview
-UpListTracker is an Android application that monitors queue positions or sales rankings from web pages. It features real-time monitoring with foreground service capabilities, WiFi-based activation, and push notifications for position changes.
+A Kotlin Android app that monitors a user's "up" position (queue or sales rank) from a web page, but only when connected to a user-specified store Wi-Fi SSID.
 
 ## Features
 
 ### Core Functionality
-- **Real-time Position Monitoring**: Continuously checks web pages for position changes using a foreground service
-- **WiFi-Based Activation**: Only operates when connected to a specified store WiFi network
-- **Push Notifications**: Sends high-priority notifications when position changes are detected
-- **Manual Refresh**: Pull-to-refresh functionality for immediate position checks
-- **Settings Management**: Runtime configuration of WiFi SSID, target URL, and polling intervals
-- **Session Management**: Automatic login credential caching and session renewal
+- **Wi-Fi SSID Monitoring**: Only fetches position data when connected to the configured store Wi-Fi
+- **Real-time Monitoring**: Continuous background monitoring with configurable polling intervals (1-15 minutes)
+- **Position Tracking**: Extracts position data from web pages using CSS selectors
+- **Session Management**: Automatic login and session cookie caching with expiration handling
+- **Foreground Service**: Persistent monitoring service with notification controls
 
-### Technical Features
-- **Foreground Service**: Persistent monitoring that survives app backgrounding
-- **Session Management**: Handles login sessions for authenticated web pages with cookie caching
-- **Retry Logic**: Exponential backoff for failed requests
-- **Status Indicators**: Visual feedback for monitoring state (Active/Paused/Offline)
-- **Accessibility Support**: Screen reader announcements for status changes
-- **Dark Mode Support**: Proper theming for both light and dark themes
-- **Structured Logging**: Comprehensive logging with Timber for debugging and monitoring
+### User Interface
+- **Main Screen**: Displays current position with status indicators and pull-to-refresh
+- **Copy Position**: One-tap copy of current position to clipboard for easy sharing
+- **Settings Screen**: Comprehensive configuration interface with real-time validation
+- **Status Indicators**: Visual feedback for monitoring states (Active, Paused, Offline)
+- **Accessibility**: Full content descriptions and screen reader support
 
-### Security Features
-- **Configurable Credentials**: Login URL, employee number, and password stored in SharedPreferences
-- **Session Caching**: Reduces login overhead with 30-minute cookie caching
-- **Automatic Session Renewal**: Detects expired sessions and re-authenticates automatically
-- **Secure Storage**: No hard-coded credentials in source code
+### Notifications
+- **Position Change Alerts**: High-priority notifications when position changes
+- **Monitoring Status**: Persistent notification with current position and last checked time
+- **Quick Actions**: Restart and Stop actions directly from notification
+- **Test Notifications**: Built-in notification testing for verification
+
+### Advanced Features
+- **Auto-start on Boot**: Optional automatic monitoring startup after device reboot
+- **Network Resilience**: Automatic reconnection and monitoring resumption
+- **Error Handling**: Comprehensive error handling with user-friendly messages
+- **Debug Tools**: Force error simulation and enhanced logging (debug builds only)
+- **Permission Management**: Runtime permission requests with user guidance
 
 ## Architecture
 
-### Key Components
-- **MainActivity**: Main UI with position display and pull-to-refresh
+### Components
+- **MainActivity**: Primary UI with position display and refresh functionality
+- **SettingsActivity**: Configuration interface for all app settings
 - **PositionMonitorService**: Foreground service for continuous monitoring
-- **SettingsActivity**: Configuration interface for app settings
-- **PositionUtils**: Utility class for HTML parsing
+- **PositionRepository**: StateFlow-based position data management
+- **PositionUtils**: Utility class for HTML parsing and authentication
 - **UpListTrackerApplication**: Application class with Hilt dependency injection
 
 ### Dependencies
@@ -46,6 +50,26 @@ UpListTracker is an Android application that monitors queue positions or sales r
 - **SwipeRefreshLayout**: Pull-to-refresh functionality
 - **Robolectric**: Android testing framework
 - **MockWebServer**: HTTP server mocking for tests
+
+## Recent Improvements (Latest Update)
+
+### UI/UX Enhancements
+- **Copy Position Button**: Added one-tap copy functionality to main screen
+- **Enhanced Layout**: Improved position display with dedicated copy button
+- **Better Icons**: Added custom copy icon for improved visual clarity
+- **Debug Features**: Force error button for testing error scenarios (debug builds only)
+
+### Notification Improvements
+- **Enhanced Notification**: Shows current position and last checked time
+- **Restart Action**: Added restart button to notification for quick service restart
+- **Better Status Display**: More informative notification content
+- **Quick Controls**: Direct access to monitoring controls from notification
+
+### Code Quality
+- **Kotlin Best Practices**: Improved null safety and error handling
+- **Better Error Messages**: More descriptive error messages for users
+- **Accessibility**: Enhanced content descriptions and screen reader support
+- **Debug Tools**: Added testing utilities for development and QA
 
 ## Setup Instructions
 
@@ -106,6 +130,7 @@ The app looks for position data using the CSS selector `#position-element`. If y
 
 #### Manual Checks
 - **Pull-to-refresh**: Swipe down on the main screen for immediate position check
+- **Copy Position**: Tap the "Copy" button to copy current position to clipboard
 - **Settings**: Tap the Settings button to modify configuration
 - **Clear Session**: Use "Clear Cached Session" in Settings to force re-login
 
@@ -114,14 +139,20 @@ The app looks for position data using the CSS selector `#position-element`. If y
 - **Paused**: Monitoring is temporarily stopped
 - **Offline**: Not connected to store WiFi
 
+#### Notification Controls
+- **Restart**: Tap "Restart" in notification to restart monitoring service
+- **Stop**: Tap "Stop" in notification to stop monitoring
+- **Test**: Use "Test Notification" in Settings to verify notification permissions
+
 ## Development
 
 ### Project Structure
 ```
 app/src/main/java/com/example/uplisttracker/
 ├── MainActivity.kt              # Main UI and refresh logic
-├── PositionMonitorService.kt    # Foreground service for monitoring
 ├── SettingsActivity.kt          # Configuration interface
+├── PositionMonitorService.kt    # Foreground service for monitoring
+├── PositionRepository.kt        # StateFlow-based data management
 ├── PositionUtils.kt             # HTML parsing utilities
 ├── UpListTrackerApplication.kt  # Application class with Hilt setup
 └── ui/theme/                    # UI theming resources
@@ -136,143 +167,71 @@ app/src/test/java/com/example/uplisttracker/
 - **MainActivity.kt**: Handles UI interactions and manual position fetching
 - **PositionMonitorService.kt**: Core monitoring logic with login session management
 - **SettingsActivity.kt**: Runtime configuration interface
-- **activity_main.xml**: Main UI layout
+- **activity_main.xml**: Main UI layout with copy functionality
 - **build.gradle**: Dependencies and build configuration
 
 ### Testing
 
-#### Running Tests
+#### Unit Tests
 ```bash
-# Run all unit tests
-./gradlew test
-
-# Run specific test class
-./gradlew test --tests PositionUtilsTest
-
-# Run with coverage
-./gradlew testDebugUnitTestCoverage
+./gradlew testDebugUnitTest
 ```
 
-#### Test Coverage
-- **HTML Parsing**: Tests for various HTML structures and edge cases
-- **Authentication**: Login success/failure, session management, timeout handling
-- **Settings**: SharedPreferences storage and retrieval
-- **Network**: HTTP response codes, cookie handling, error scenarios
+#### Instrumented Tests
+```bash
+./gradlew connectedAndroidTest
+```
 
-#### Test Dependencies
-- **MockWebServer**: Simulates HTTP responses for testing
-- **Robolectric**: Android framework testing without emulator
-- **JUnit**: Core testing framework
-- **Kotlin Coroutines Test**: Async code testing
-
-### Logging and Debugging
-
-#### Structured Logging
-The app uses Timber for comprehensive logging:
-- **Debug builds**: Full logging to logcat
-- **Release builds**: Custom crash reporting tree (configurable)
-
-#### Key Log Messages
-- `Position changed from 'X' to 'Y'`
-- `Login successful, cached X cookies`
-- `Session expired, clearing cached cookies`
-- `Using cached cookies (age: Xs)`
-
-#### Debug Information
-- Enable Timber logging for detailed debug information
-- Check logcat for service and network-related errors
-- Verify WiFi SSID configuration matches exactly
-- Monitor session cookie expiration and renewal
-
-## Notification Channels
-- The app creates two notification channels on startup:
-  - `up_chan`: High-importance alerts for position changes.
-  - `position_monitor`: Low-importance status for ongoing monitoring.
+#### Debug Features
+- **Force Error**: Available in debug builds for testing error scenarios
+- **Enhanced Logging**: Detailed logs for debugging and development
+- **Test Notifications**: Built-in notification testing
 
 ## Permissions
-- The app requests `ACCESS_FINE_LOCATION` at runtime before starting monitoring, with a rationale toast if needed.
 
-## Live Banner Updates
-- The app now uses Kotlin StateFlow for instant, lifecycle-aware in-app updates between the service and activity.
-- LocalBroadcastManager is no longer used.
-
-## Session & Cookie Management
-
-- All login, session, and cookie logic is now unified in `PositionUtils`. Both the Activity and Service use this utility for authentication, session caching, and making authenticated requests. This ensures robust, DRY, and consistent session handling throughout the app.
-
-## User Experience
-
-- If location permission is denied, the app will show a banner and pause monitoring until permission is granted.
-- The app is resilient to network interruptions and process kills, and will always request the necessary permissions at runtime.
+The app requires the following permissions:
+- **ACCESS_FINE_LOCATION**: Required to detect Wi-Fi SSID (Android 9+)
+- **POST_NOTIFICATIONS**: Required for position change alerts (Android 13+)
+- **FOREGROUND_SERVICE**: Required for continuous monitoring
+- **RECEIVE_BOOT_COMPLETED**: Required for auto-start on boot (optional)
 
 ## Troubleshooting
 
 ### Common Issues
-1. **"Not on store WiFi"**: Ensure you're connected to the configured WiFi network
-2. **"Login failed"**: Check credentials in Settings
-3. **"Selector not found"**: Verify the CSS selector matches your target page
-4. **"Session expired"**: Use "Clear Cached Session" in Settings
-5. **Notifications not showing**: Grant notification permissions in app settings
+1. **"WiFi SSID unknown"**: Ensure location permission is granted
+2. **"Login failed"**: Verify credentials in Settings
+3. **"Offline" status**: Check if connected to correct WiFi network
+4. **No notifications**: Grant notification permission in app settings
 
-### Debug Information
-- Enable Timber logging for detailed debug information
-- Check logcat for service and network-related errors
-- Verify WiFi SSID configuration matches exactly
-- Monitor session cookie expiration and renewal
-
-### Performance Optimization
-- Session cookies are cached for 30 minutes to reduce login overhead
-- Exponential backoff for failed requests prevents server overload
-- Foreground service ensures reliable background monitoring
+### Debug Tools
+- Use "Test Notification" in Settings to verify notification setup
+- Use "Force Error" (debug builds) to test error handling
+- Check logs with `adb logcat` for detailed debugging information
 
 ## Contributing
 
-### Development Setup
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
 4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
-
-### Code Style
-- Follow Kotlin coding conventions
-- Use meaningful variable and function names
-- Add comments for complex logic
-- Include unit tests for new features
+5. Submit a pull request
 
 ## License
-[Add your license information here]
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Changelog
 
-### Version 1.0
-- Initial release with basic position monitoring
-- Foreground service implementation
-- WiFi-based activation
-- Push notifications for position changes
-- Settings management
-- Session caching and management
-- Comprehensive automated testing
-- Dark mode support
-- Accessibility improvements
-- Structured logging with Timber
+### Latest Update
+- Added copy position functionality with dedicated button
+- Enhanced notification with restart action and better status display
+- Added debug force error button for testing
+- Improved UI layout and accessibility
+- Better error handling and user feedback
 
-## Recent Updates
-
-- **Manifest & Application ID**: Ensured correct manifest formatting and applicationId quoting in build.gradle.
-- **Polling Interval Picker**: The Settings screen now features a NumberPicker with a live-updating label showing the current interval in minutes.
-- **Banner Timestamp**: The banner now displays a "Last checked at..." timestamp for better user feedback.
-- **Android 13+ Notification Permission**: The app now requests the POST_NOTIFICATIONS permission at runtime on Android 13+ devices, ensuring notifications work as expected.
-
-## Recent Enhancements
-
-- **User-configurable Store Wi-Fi SSID:** You can now set your store's Wi-Fi SSID in Settings. The app will use this value for all Wi-Fi checks.
-- **Runtime permissions:** The app requests `ACCESS_FINE_LOCATION` (for Wi-Fi SSID) and `POST_NOTIFICATIONS` (for alerts) at runtime if not already granted.
-- **Notification channel:** A high-importance NotificationChannel (`position_changes`) is created on app startup for position change alerts.
-- **Robust error handling:** The app logs and retries once if fetching the position fails.
-- **Android 10+ compliance:** For best background behavior, consider migrating periodic tasks from `Handler.postDelayed` to `WorkManager` (see Android docs for details).
-
-## Wi-Fi SSID Robustness
-
-- If your device returns `SSID_UNKNOWN` or `<unknown ssid>` (common on some Android devices), the app will now retry after a short delay instead of immediately going offline. If this state persists, a warning banner is shown in the app. 
+### Previous Updates
+- Implemented StateFlow for real-time position updates
+- Added comprehensive testing suite
+- Enhanced accessibility features
+- Improved notification system
+- Added auto-start on boot functionality 

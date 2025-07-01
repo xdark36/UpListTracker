@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/swipeRefreshLayout"
+    android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -47,18 +47,38 @@
             style="?android:attr/progressBarStyleLarge"
             android:contentDescription="Loading spinner" />
 
-        <TextView
-            android:id="@+id/positionText"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Loading…"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:padding="24dp"
-            android:background="@color/banner_bg"
-            android:textColor="@color/position_text"
+            android:orientation="horizontal"
             android:gravity="center"
-            android:contentDescription="Current position value" />
+            android:padding="24dp">
+
+            <TextView
+                android:id="@+id/positionText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Loading…"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:background="@color/banner_bg"
+                android:textColor="@color/position_text"
+                android:gravity="center"
+                android:contentDescription="Current position value" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/copyButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Copy"
+                android:icon="@drawable/ic_copy"
+                app:iconPadding="4dp"
+                android:contentDescription="Copy position to clipboard"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+        </LinearLayout>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/settingsButton"

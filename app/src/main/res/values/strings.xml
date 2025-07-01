@@ -1,3 +1,13 @@
 <resources>
-    <string name="app_name">Up List Tracker</string>
+    <string name="app_name">UpListTracker</string>
+    <string name="test_notification">Test Notification</string>
+    <string name="test_notification_content">This is a test notification from UpListTracker.</string>
+    <string name="current_wifi">Current Wi-Fi: %1$s</string>
+    <string name="status_offline">Offline: Not on store WiFi</string>
+    <string name="status_login_failed">Login failed. Check credentials.</string>
+    <string name="status_http_error">Failed to fetch position (HTTP %1$s)</string>
+    <string name="status_position_updated">Position updated!</string>
+    <string name="status_refreshed">Refreshed!</string>
+    <string name="status_session_expired">Session expired. Please refresh.</string>
+    <string name="status_error">Error: %1$s</string>
 </resources>

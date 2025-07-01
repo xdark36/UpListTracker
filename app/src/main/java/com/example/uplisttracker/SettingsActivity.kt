@@ -11,7 +11,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import android.widget.NumberPicker
 import android.widget.Toast
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -119,6 +121,14 @@ class SettingsActivity : AppCompatActivity() {
         autoStartToggle.setPadding(0, 8, 0, 16)
         layout.addView(autoStartToggle)
         
+        // Show current Wi-Fi SSID
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+        val currentSsid = wifiManager.connectionInfo.ssid?.replace("\"", "") ?: "<unknown>"
+        val ssidStatus = TextView(this)
+        ssidStatus.text = "Current Wi-Fi: $currentSsid"
+        ssidStatus.setPadding(0, 0, 0, 16)
+        layout.addView(ssidStatus)
+        
         // Save Button
         val saveButton = Button(this)
         saveButton.text = "Save Settings"
@@ -130,6 +140,37 @@ class SettingsActivity : AppCompatActivity() {
         clearSessionButton.text = "Clear Cached Session"
         clearSessionButton.setPadding(0, 8, 0, 0)
         layout.addView(clearSessionButton)
+        
+        // Test Notification Button
+        val testNotifButton = Button(this)
+        testNotifButton.text = "Test Notification"
+        testNotifButton.setPadding(0, 8, 0, 0)
+        testNotifButton.setOnClickListener {
+            val notif = androidx.core.app.NotificationCompat.Builder(this, "up_chan")
+                .setSmallIcon(R.drawable.ic_check_circle)
+                .setContentTitle("Test Notification")
+                .setContentText("This is a test notification from UpListTracker.")
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                .build()
+            val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            mgr.notify(999, notif)
+        }
+        layout.addView(testNotifButton)
+        
+        // Debug: Force Error Button (only in debug builds)
+        if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            val forceErrorButton = Button(this)
+            forceErrorButton.text = "Force Error (Debug)"
+            forceErrorButton.setPadding(0, 8, 0, 0)
+            forceErrorButton.setOnClickListener {
+                // Simulate an error by trying to access a non-existent URL
+                val intent = Intent(this, PositionMonitorService::class.java)
+                intent.action = PositionMonitorService.ACTION_REFRESH
+                ContextCompat.startForegroundService(this, intent)
+                Toast.makeText(this, "Forced error scenario triggered", Toast.LENGTH_SHORT).show()
+            }
+            layout.addView(forceErrorButton)
+        }
         
         setContentView(layout)
 
