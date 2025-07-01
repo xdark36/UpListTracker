@@ -244,4 +244,11 @@ The app requires the following permissions:
 - Comprehensive automated testing
 - Dark mode support
 - Accessibility improvements
-- Structured logging with Timber 
+- Structured logging with Timber
+
+## Recent Updates
+
+- **Manifest & Application ID**: Ensured correct manifest formatting and applicationId quoting in build.gradle.
+- **Polling Interval Picker**: The Settings screen now features a NumberPicker with a live-updating label showing the current interval in minutes.
+- **Banner Timestamp**: The banner now displays a "Last checked at..." timestamp for better user feedback.
+- **Android 13+ Notification Permission**: The app now requests the POST_NOTIFICATIONS permission at runtime on Android 13+ devices, ensuring notifications work as expected. 
