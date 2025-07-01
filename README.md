@@ -262,6 +262,14 @@ The app uses Timber for comprehensive logging:
 - **Banner Timestamp**: The banner now displays a "Last checked at..." timestamp for better user feedback.
 - **Android 13+ Notification Permission**: The app now requests the POST_NOTIFICATIONS permission at runtime on Android 13+ devices, ensuring notifications work as expected.
 
+## Recent Enhancements
+
+- **User-configurable Store Wi-Fi SSID:** You can now set your store's Wi-Fi SSID in Settings. The app will use this value for all Wi-Fi checks.
+- **Runtime permissions:** The app requests `ACCESS_FINE_LOCATION` (for Wi-Fi SSID) and `POST_NOTIFICATIONS` (for alerts) at runtime if not already granted.
+- **Notification channel:** A high-importance NotificationChannel (`position_changes`) is created on app startup for position change alerts.
+- **Robust error handling:** The app logs and retries once if fetching the position fails.
+- **Android 10+ compliance:** For best background behavior, consider migrating periodic tasks from `Handler.postDelayed` to `WorkManager` (see Android docs for details).
+
 ## Wi-Fi SSID Robustness
 
 - If your device returns `SSID_UNKNOWN` or `<unknown ssid>` (common on some Android devices), the app will now retry after a short delay instead of immediately going offline. If this state persists, a warning banner is shown in the app. 

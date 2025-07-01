@@ -51,12 +51,16 @@ class MainActivity : ComponentActivity() {
     private val requestLocationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
-        if (isGranted) {
-            fetchAndDisplayPosition()
-        } else {
-            val bannerText = findViewById<TextView>(R.id.bannerText)
-            showBanner(bannerText, "Location permission required for WiFi check", false)
-            updateStatusIndicator(findViewById(R.id.statusText), MonitorState.OFFLINE)
+        if (!isGranted) {
+            Toast.makeText(this, "Location permission required for WiFi check", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (!isGranted) {
+            Toast.makeText(this, "Notification permission required for alerts", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -66,8 +70,14 @@ class MainActivity : ComponentActivity() {
 
         setContentView(R.layout.activity_main)
         
-        // Check and request notification permission for Android 13+
-        checkNotificationPermission()
+        // Request permissions on startup
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         
         // Check if monitoring should be started (don't auto-start on launch)
         val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)

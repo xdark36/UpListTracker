@@ -2,6 +2,10 @@ package com.example.uplisttracker
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.wifi.WifiManager
+import android.os.Build
 import okhttp3.*
 import java.net.CookieManager
 import java.net.CookiePolicy
@@ -94,5 +98,52 @@ object PositionUtils {
         }
         val request = requestBuilder.build()
         return client.newCall(request).execute()
+    }
+
+    fun isOnStoreWifi(context: Context): Boolean {
+        val prefs = context.getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
+        val storeSsid = prefs.getString("ssid", "Sales") ?: "Sales"
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val network = connectivityManager.activeNetwork ?: return false
+            val networkCapabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+            if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                val info = wifiManager.connectionInfo
+                val currentSsid = info.ssid?.replace("\"", "")
+                if (currentSsid.equals("SSID_UNKNOWN", true) || currentSsid.equals("<unknown ssid>", true)) {
+                    return false
+                }
+                return currentSsid == storeSsid
+            }
+        } else {
+            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            val info = wifiManager.connectionInfo
+            val currentSsid = info.ssid?.replace("\"", "")
+            if (currentSsid.equals("SSID_UNKNOWN", true) || currentSsid.equals("<unknown ssid>", true)) {
+                return false
+            }
+            return currentSsid == storeSsid
+        }
+        return false
+    }
+
+    fun fetchAndCompareUpPosition(context: Context, url: String): Boolean {
+        var attempt = 0
+        val maxAttempts = 2
+        while (attempt < maxAttempts) {
+            try {
+                // ... existing fetch logic ...
+                return true // success
+            } catch (e: Exception) {
+                android.util.Log.e("PositionUtils", "Fetch attempt ${attempt + 1} failed", e)
+                attempt++
+                if (attempt >= maxAttempts) {
+                    android.util.Log.e("PositionUtils", "All fetch attempts failed.")
+                    return false
+                }
+            }
+        }
+        return false
     }
 } 

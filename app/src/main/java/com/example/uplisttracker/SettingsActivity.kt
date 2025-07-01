@@ -20,9 +20,9 @@ class SettingsActivity : AppCompatActivity() {
         layout.orientation = android.widget.LinearLayout.VERTICAL
         layout.setPadding(32, 32, 32, 32)
         
-        // SSID Input
+        // Store Wi-Fi SSID Input
         val ssidLabel = TextView(this)
-        ssidLabel.text = "Store WiFi SSID:"
+        ssidLabel.text = "Store Wi-Fi SSID:"
         ssidLabel.textSize = 16f
         layout.addView(ssidLabel)
         

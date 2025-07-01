@@ -34,6 +34,15 @@ class UpListTrackerApplication : Application() {
             }
             val mgr = getSystemService(NotificationManager::class.java)
             mgr.createNotificationChannel(channel)
+
+            val positionChannel = NotificationChannel(
+                "position_changes",
+                "Position Updates",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifications for position updates"
+            }
+            mgr.createNotificationChannel(positionChannel)
         }
     }
 }
