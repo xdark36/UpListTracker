@@ -30,6 +30,40 @@ class SettingsActivity : AppCompatActivity() {
         ssidInput.setPadding(0, 8, 0, 16)
         layout.addView(ssidInput)
         
+        // Login URL Input
+        val loginUrlLabel = TextView(this)
+        loginUrlLabel.text = "Login URL:"
+        loginUrlLabel.textSize = 16f
+        layout.addView(loginUrlLabel)
+        
+        val loginUrlInput = EditText(this)
+        loginUrlInput.hint = "Enter login page URL"
+        loginUrlInput.setPadding(0, 8, 0, 16)
+        layout.addView(loginUrlInput)
+        
+        // Employee Number Input
+        val empNumberLabel = TextView(this)
+        empNumberLabel.text = "Employee Number:"
+        empNumberLabel.textSize = 16f
+        layout.addView(empNumberLabel)
+        
+        val empNumberInput = EditText(this)
+        empNumberInput.hint = "Enter employee number"
+        empNumberInput.setPadding(0, 8, 0, 16)
+        layout.addView(empNumberInput)
+        
+        // Password Input
+        val passwordLabel = TextView(this)
+        passwordLabel.text = "Password:"
+        passwordLabel.textSize = 16f
+        layout.addView(passwordLabel)
+        
+        val passwordInput = EditText(this)
+        passwordInput.hint = "Enter password"
+        passwordInput.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+        passwordInput.setPadding(0, 8, 0, 16)
+        layout.addView(passwordInput)
+        
         // URL Input
         val urlLabel = TextView(this)
         urlLabel.text = "Position URL:"
@@ -48,7 +82,7 @@ class SettingsActivity : AppCompatActivity() {
         layout.addView(monitoringLabel)
         
         val monitoringSwitch = SwitchCompat(this)
-        monitoringSwitch.text = "Enable continuous monitoring (30s intervals)"
+        monitoringSwitch.text = "Enable continuous monitoring"
         monitoringSwitch.setPadding(0, 8, 0, 16)
         layout.addView(monitoringSwitch)
         
@@ -72,9 +106,19 @@ class SettingsActivity : AppCompatActivity() {
         saveButton.setPadding(0, 16, 0, 0)
         layout.addView(saveButton)
         
+        // Clear Session Button
+        val clearSessionButton = Button(this)
+        clearSessionButton.text = "Clear Cached Session"
+        clearSessionButton.setPadding(0, 8, 0, 0)
+        layout.addView(clearSessionButton)
+        
         setContentView(layout)
 
+        // Load existing values
         ssidInput.setText(prefs.getString("ssid", "Sales"))
+        loginUrlInput.setText(prefs.getString("login_url", "https://selling1.vcfcorp.com/"))
+        empNumberInput.setText(prefs.getString("emp_number", "90045"))
+        passwordInput.setText(prefs.getString("user_password", "03"))
         urlInput.setText(prefs.getString("url", "https://selling.vcfcorp.com/"))
         
         // Check if monitoring is currently active
@@ -83,12 +127,18 @@ class SettingsActivity : AppCompatActivity() {
 
         saveButton.setOnClickListener {
             val ssid = ssidInput.text.toString()
+            val loginUrl = loginUrlInput.text.toString()
+            val empNumber = empNumberInput.text.toString()
+            val password = passwordInput.text.toString()
             val url = urlInput.text.toString()
             val monitoringEnabled = monitoringSwitch.isChecked
             val pollingIntervalMin = intervalPicker.value
             
             prefs.edit()
                 .putString("ssid", ssid)
+                .putString("login_url", loginUrl)
+                .putString("emp_number", empNumber)
+                .putString("user_password", password)
                 .putString("url", url)
                 .putBoolean("monitoring_active", monitoringEnabled)
                 .putInt("polling_interval_min", pollingIntervalMin)
@@ -103,6 +153,14 @@ class SettingsActivity : AppCompatActivity() {
             }
             
             finish()
+        }
+        
+        clearSessionButton.setOnClickListener {
+            prefs.edit()
+                .remove("cached_cookies")
+                .remove("cookie_timestamp")
+                .apply()
+            android.widget.Toast.makeText(this, "Cached session cleared", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 } 

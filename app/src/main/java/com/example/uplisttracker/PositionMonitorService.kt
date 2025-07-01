@@ -124,29 +124,62 @@ class PositionMonitorService : Service() {
 
                 val client = OkHttpClient()
 
-                // --- LOGIN LOGIC START ---
-                val loginUrl = "https://selling1.vcfcorp.com/"
-                val loginRequestBody = okhttp3.FormBody.Builder()
-                    .add("emp_number", "90045")
-                    .add("user_password", "03")
-                    .build()
-                val loginRequest = Request.Builder()
-                    .url(loginUrl)
-                    .post(loginRequestBody)
-                    .build()
-                val loginResponse = client.newCall(loginRequest).execute()
-                val cookies = loginResponse.headers("Set-Cookie")
-                val loginSuccess = cookies.isNotEmpty() && loginResponse.isSuccessful
-                loginResponse.close()
-                if (!loginSuccess) {
-                    Timber.e("Login failed: no cookies or bad response")
-                    android.os.Handler(mainLooper).post {
-                        android.widget.Toast.makeText(this, "Login failed. Check credentials.", android.widget.Toast.LENGTH_LONG).show()
+                // Get credentials from SharedPreferences
+                val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
+                val loginUrl = prefs.getString("login_url", "https://selling1.vcfcorp.com/") ?: "https://selling1.vcfcorp.com/"
+                val empNumber = prefs.getString("emp_number", "90045") ?: "90045"
+                val userPassword = prefs.getString("user_password", "03") ?: "03"
+                
+                // Check if we have cached cookies and if they're still valid
+                val cachedCookies = prefs.getString("cached_cookies", null)
+                val cookieTimestamp = prefs.getLong("cookie_timestamp", 0L)
+                val currentTime = System.currentTimeMillis()
+                val cookieAge = currentTime - cookieTimestamp
+                val cookieValidDuration = 30 * 60 * 1000L // 30 minutes
+                
+                var cookieHeader = ""
+                var loginSuccess = false
+                
+                if (cachedCookies != null && cookieAge < cookieValidDuration) {
+                    // Use cached cookies
+                    cookieHeader = cachedCookies
+                    loginSuccess = true
+                    Timber.d("Using cached cookies (age: ${cookieAge / 1000}s)")
+                } else {
+                    // Need to login again
+                    Timber.d("Cached cookies expired or missing, logging in...")
+                    
+                    // --- LOGIN LOGIC START ---
+                    val loginRequestBody = okhttp3.FormBody.Builder()
+                        .add("emp_number", empNumber)
+                        .add("user_password", userPassword)
+                        .build()
+                    val loginRequest = Request.Builder()
+                        .url(loginUrl)
+                        .post(loginRequestBody)
+                        .build()
+                    val loginResponse = client.newCall(loginRequest).execute()
+                    val cookies = loginResponse.headers("Set-Cookie")
+                    loginSuccess = cookies.isNotEmpty() && loginResponse.isSuccessful
+                    loginResponse.close()
+                    
+                    if (loginSuccess) {
+                        cookieHeader = cookies.joinToString("; ")
+                        // Cache the cookies with timestamp
+                        prefs.edit()
+                            .putString("cached_cookies", cookieHeader)
+                            .putLong("cookie_timestamp", currentTime)
+                            .apply()
+                        Timber.d("Login successful, cookies cached")
+                    } else {
+                        Timber.e("Login failed: no cookies or bad response")
+                        android.os.Handler(mainLooper).post {
+                            android.widget.Toast.makeText(this, "Login failed. Check credentials.", android.widget.Toast.LENGTH_LONG).show()
+                        }
+                        return
                     }
-                    return
+                    // --- LOGIN LOGIC END ---
                 }
-                val cookieHeader = cookies.joinToString("; ")
-                // --- LOGIN LOGIC END ---
 
                 // Fetch page with OkHttp, using session cookies
                 val positionRequest = Request.Builder()
@@ -157,6 +190,18 @@ class PositionMonitorService : Service() {
 
                 if (!response.isSuccessful) {
                     Timber.e("HTTP request failed: ${response.code}")
+                    
+                    // If we get a 401/403, clear cached cookies and retry
+                    if (response.code == 401 || response.code == 403) {
+                        Timber.d("Session expired, clearing cached cookies")
+                        prefs.edit()
+                            .remove("cached_cookies")
+                            .remove("cookie_timestamp")
+                            .apply()
+                        response.close()
+                        throw Exception("Session expired")
+                    }
+                    
                     android.os.Handler(mainLooper).post {
                         android.widget.Toast.makeText(this, "Failed to fetch position (HTTP ${response.code})", android.widget.Toast.LENGTH_LONG).show()
                     }
@@ -182,7 +227,6 @@ class PositionMonitorService : Service() {
                 }
 
                 // Compare to last value in SharedPreferences
-                val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
                 val lastPosition = prefs.getString("last_position", null)
 
                 if (newPosition.isNotEmpty() && newPosition != lastPosition) {

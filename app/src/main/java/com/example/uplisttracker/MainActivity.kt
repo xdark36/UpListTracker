@@ -142,12 +142,107 @@ class MainActivity : ComponentActivity() {
                     }
                     return@launch
                 }
+                
                 val client = OkHttpClient()
-                val request = Request.Builder().url(url).build()
-                val response = client.newCall(request).execute()
+                
+                // Get credentials from SharedPreferences
+                val loginUrl = prefs.getString("login_url", "https://selling1.vcfcorp.com/") ?: "https://selling1.vcfcorp.com/"
+                val empNumber = prefs.getString("emp_number", "90045") ?: "90045"
+                val userPassword = prefs.getString("user_password", "03") ?: "03"
+                
+                // Check if we have cached cookies and if they're still valid
+                val cachedCookies = prefs.getString("cached_cookies", null)
+                val cookieTimestamp = prefs.getLong("cookie_timestamp", 0L)
+                val currentTime = System.currentTimeMillis()
+                val cookieAge = currentTime - cookieTimestamp
+                val cookieValidDuration = 30 * 60 * 1000L // 30 minutes
+                
+                var cookieHeader = ""
+                var loginSuccess = false
+                
+                if (cachedCookies != null && cookieAge < cookieValidDuration) {
+                    // Use cached cookies
+                    cookieHeader = cachedCookies
+                    loginSuccess = true
+                    android.util.Log.d("MainActivity", "Using cached cookies (age: ${cookieAge / 1000}s)")
+                } else {
+                    // Need to login again
+                    android.util.Log.d("MainActivity", "Cached cookies expired or missing, logging in...")
+                    
+                    val loginRequestBody = okhttp3.FormBody.Builder()
+                        .add("emp_number", empNumber)
+                        .add("user_password", userPassword)
+                        .build()
+                    val loginRequest = Request.Builder()
+                        .url(loginUrl)
+                        .post(loginRequestBody)
+                        .build()
+                    val loginResponse = client.newCall(loginRequest).execute()
+                    val cookies = loginResponse.headers("Set-Cookie")
+                    loginSuccess = cookies.isNotEmpty() && loginResponse.isSuccessful
+                    loginResponse.close()
+                    
+                    if (loginSuccess) {
+                        cookieHeader = cookies.joinToString("; ")
+                        // Cache the cookies with timestamp
+                        prefs.edit()
+                            .putString("cached_cookies", cookieHeader)
+                            .putLong("cookie_timestamp", currentTime)
+                            .apply()
+                        android.util.Log.d("MainActivity", "Login successful, cookies cached")
+                    } else {
+                        android.util.Log.e("MainActivity", "Login failed: no cookies or bad response")
+                        runOnUiThread {
+                            showSpinner(progressBar, false)
+                            positionTextView.text = "Login Failed\nLast checked: ${getTimestamp()}"
+                            showBanner(bannerText, "Login failed. Check credentials.", success = false)
+                            onError?.invoke("Login failed. Check credentials.")
+                        }
+                        return@launch
+                    }
+                }
+
+                // Fetch page with OkHttp, using session cookies
+                val positionRequest = Request.Builder()
+                    .url(url)
+                    .addHeader("Cookie", cookieHeader)
+                    .build()
+                val response = client.newCall(positionRequest).execute()
+
+                if (!response.isSuccessful) {
+                    android.util.Log.e("MainActivity", "HTTP request failed: ${response.code}")
+                    
+                    // If we get a 401/403, clear cached cookies and retry
+                    if (response.code == 401 || response.code == 403) {
+                        android.util.Log.d("MainActivity", "Session expired, clearing cached cookies")
+                        prefs.edit()
+                            .remove("cached_cookies")
+                            .remove("cookie_timestamp")
+                            .apply()
+                        response.close()
+                        runOnUiThread {
+                            showSpinner(progressBar, false)
+                            positionTextView.text = "Session Expired\nLast checked: ${getTimestamp()}"
+                            showBanner(bannerText, "Session expired. Please refresh.", success = false)
+                            onError?.invoke("Session expired. Please refresh.")
+                        }
+                        return@launch
+                    }
+                    
+                    response.close()
+                    runOnUiThread {
+                        showSpinner(progressBar, false)
+                        positionTextView.text = "HTTP Error\nLast checked: ${getTimestamp()}"
+                        showBanner(bannerText, "Failed to fetch position (HTTP ${response.code})", success = false)
+                        onError?.invoke("Failed to fetch position (HTTP ${response.code})")
+                    }
+                    return@launch
+                }
+
                 val html = response.body?.string() ?: ""
                 response.close()
                 val position = extractPosition(html)
+                
                 runOnUiThread {
                     showSpinner(progressBar, false)
                     positionTextView.text = "Position: $position\nLast checked: ${getTimestamp()}"
@@ -155,9 +250,10 @@ class MainActivity : ComponentActivity() {
                     onSuccess?.invoke()
                 }
             } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Error fetching position", e)
                 runOnUiThread {
                     showSpinner(progressBar, false)
-                    positionTextView.text = "Offline\nLast checked: ${getTimestamp()}"
+                    positionTextView.text = "Error\nLast checked: ${getTimestamp()}"
                     showBanner(bannerText, "Error: ${e.localizedMessage}", success = false)
                     onError?.invoke("Error: ${e.localizedMessage}")
                 }
