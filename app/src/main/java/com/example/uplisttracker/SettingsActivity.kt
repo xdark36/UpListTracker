@@ -10,6 +10,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import android.widget.NumberPicker
+import android.widget.Toast
 
 class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,6 +113,12 @@ class SettingsActivity : AppCompatActivity() {
             intervalValueLabel.text = "Current: $newVal minute${if (newVal > 1) "s" else ""}"
         }
         
+        // Auto-start toggle
+        val autoStartToggle = SwitchCompat(this)
+        autoStartToggle.text = "Auto-start on boot"
+        autoStartToggle.setPadding(0, 8, 0, 16)
+        layout.addView(autoStartToggle)
+        
         // Save Button
         val saveButton = Button(this)
         saveButton.text = "Save Settings"
@@ -136,6 +143,9 @@ class SettingsActivity : AppCompatActivity() {
         // Check if monitoring is currently active
         val isMonitoringActive = prefs.getBoolean("monitoring_active", false)
         monitoringSwitch.isChecked = isMonitoringActive
+        
+        // Auto-start toggle
+        autoStartToggle.isChecked = prefs.getBoolean("auto_start_on_boot", false)
 
         saveButton.setOnClickListener {
             val ssid = ssidInput.text.toString()
@@ -145,6 +155,7 @@ class SettingsActivity : AppCompatActivity() {
             val url = urlInput.text.toString()
             val monitoringEnabled = monitoringSwitch.isChecked
             val pollingIntervalMin = intervalPicker.value
+            val autoStart = autoStartToggle.isChecked
             
             prefs.edit()
                 .putString("ssid", ssid)
@@ -154,6 +165,7 @@ class SettingsActivity : AppCompatActivity() {
                 .putString("url", url)
                 .putBoolean("monitoring_active", monitoringEnabled)
                 .putInt("polling_interval_min", pollingIntervalMin)
+                .putBoolean("auto_start_on_boot", autoStart)
                 .apply()
             
             // Start or stop monitoring based on toggle
@@ -164,6 +176,7 @@ class SettingsActivity : AppCompatActivity() {
                 stopService(serviceIntent)
             }
             
+            Toast.makeText(this, "Settings saved!", Toast.LENGTH_SHORT).show()
             finish()
         }
         
@@ -172,7 +185,7 @@ class SettingsActivity : AppCompatActivity() {
                 .remove("cached_cookies")
                 .remove("cookie_timestamp")
                 .apply()
-            android.widget.Toast.makeText(this, "Cached session cleared", android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Cached session cleared!", Toast.LENGTH_SHORT).show()
         }
     }
 } 

@@ -9,22 +9,29 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import okhttp3.*
 import org.jsoup.Jsoup
 import timber.log.Timber
+import java.io.IOException
+import java.net.CookieManager
+import java.net.CookiePolicy
 import java.util.concurrent.TimeUnit
+import android.Manifest
 
 class PositionMonitorService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + Job())
     private var isMonitoring = false
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private var httpClient: OkHttpClient? = null
 
     companion object {
         private const val NOTIFICATION_ID = 100
@@ -58,6 +65,53 @@ class PositionMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        setupNetworkCallback()
+        setupHttpClient()
+    }
+
+    private fun setupHttpClient() {
+        val cookieJar = JavaNetCookieJar(CookieManager().apply {
+            setCookiePolicy(CookiePolicy.ACCEPT_ALL)
+        })
+        
+        httpClient = OkHttpClient.Builder()
+            .cookieJar(cookieJar)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
+    private fun setupNetworkCallback() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            networkCallback = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    Timber.i("Network available, resuming monitoring")
+                    if (isMonitoring) {
+                        scope.launch { checkPositionChange(getUrlFromPrefs()) }
+                    }
+                }
+
+                override fun onLost(network: Network) {
+                    Timber.w("Network lost, pausing monitoring")
+                    // Don't stop monitoring, just wait for network to return
+                }
+
+                override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                    val hasWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                    val hasInternet = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    Timber.d("Network capabilities changed - WiFi: $hasWifi, Internet: $hasInternet")
+                }
+            }
+            
+            val networkRequest = NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build()
+            
+            connectivityManager.registerNetworkCallback(networkRequest, networkCallback!!)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -114,6 +168,36 @@ class PositionMonitorService : Service() {
         }
     }
 
+    private fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun isOnStoreWifi(context: Context, storeSsid: String): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !hasLocationPermission()) {
+            Timber.w("Location permission not granted; cannot check SSID.")
+            return false
+        }
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val network = connectivityManager.activeNetwork ?: return false
+            val networkCapabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+            if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                val info = wifiManager.connectionInfo
+                val currentSsid = info.ssid?.replace("\"", "")
+                return currentSsid == storeSsid
+            }
+        } else {
+            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            val info = wifiManager.connectionInfo
+            val currentSsid = info.ssid?.replace("\"", "")
+            return currentSsid == storeSsid
+        }
+        return false
+    }
+
     private suspend fun checkPositionChange(url: String) {
         var attempt = 0
         var backoff = 2000L // 2 seconds
@@ -121,128 +205,34 @@ class PositionMonitorService : Service() {
         while (attempt < maxAttempts) {
             try {
                 Timber.i("Checking position for URL: $url (attempt ${attempt + 1}/$maxAttempts)")
-
-                val client = OkHttpClient()
-
-                // Get credentials from SharedPreferences
                 val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
                 val loginUrl = prefs.getString("login_url", "https://selling1.vcfcorp.com/") ?: "https://selling1.vcfcorp.com/"
                 val empNumber = prefs.getString("emp_number", "90045") ?: "90045"
                 val userPassword = prefs.getString("user_password", "03") ?: "03"
-                
-                Timber.d("Using credentials - Login URL: $loginUrl, Employee: $empNumber")
-                
-                // Check if we have cached cookies and if they're still valid
-                val cachedCookies = prefs.getString("cached_cookies", null)
-                val cookieTimestamp = prefs.getLong("cookie_timestamp", 0L)
-                val currentTime = System.currentTimeMillis()
-                val cookieAge = currentTime - cookieTimestamp
-                val cookieValidDuration = 30 * 60 * 1000L // 30 minutes
-                
-                var cookieHeader = ""
-                var loginSuccess = false
-                
-                if (cachedCookies != null && cookieAge < cookieValidDuration) {
-                    // Use cached cookies
-                    cookieHeader = cachedCookies
-                    loginSuccess = true
-                    Timber.d("Using cached cookies (age: ${cookieAge / 1000}s, valid for ${cookieValidDuration / 1000}s)")
-                } else {
-                    // Need to login again
-                    if (cachedCookies != null) {
-                        Timber.i("Cached cookies expired (age: ${cookieAge / 1000}s), logging in...")
-                    } else {
-                        Timber.i("No cached cookies found, logging in...")
-                    }
-                    
-                    // --- LOGIN LOGIC START ---
-                    val loginRequestBody = okhttp3.FormBody.Builder()
-                        .add("emp_number", empNumber)
-                        .add("user_password", userPassword)
-                        .build()
-                    val loginRequest = Request.Builder()
-                        .url(loginUrl)
-                        .post(loginRequestBody)
-                        .build()
-                    
-                    Timber.d("Sending login request to: $loginUrl")
-                    val loginResponse = client.newCall(loginRequest).execute()
-                    val cookies = loginResponse.headers("Set-Cookie")
-                    loginSuccess = cookies.isNotEmpty() && loginResponse.isSuccessful
-                    loginResponse.close()
-                    
-                    if (loginSuccess) {
-                        cookieHeader = cookies.joinToString("; ")
-                        // Cache the cookies with timestamp
-                        prefs.edit()
-                            .putString("cached_cookies", cookieHeader)
-                            .putLong("cookie_timestamp", currentTime)
-                            .apply()
-                        Timber.i("Login successful, cached ${cookies.size} cookies")
-                    } else {
-                        Timber.e("Login failed: HTTP ${loginResponse.code}, cookies: ${cookies.size}")
-                        android.os.Handler(mainLooper).post {
-                            android.widget.Toast.makeText(this, "Login failed. Check credentials.", android.widget.Toast.LENGTH_LONG).show()
-                        }
-                        return
-                    }
-                    // --- LOGIN LOGIC END ---
+                var sessionCookie = PositionUtils.getSessionCookie(this)
+                var loginSuccess = sessionCookie != null
+                if (!loginSuccess) {
+                    loginSuccess = PositionUtils.loginAndCacheSession(this, loginUrl, empNumber, userPassword)
+                    sessionCookie = PositionUtils.getSessionCookie(this)
                 }
-
-                // Fetch page with OkHttp, using session cookies
-                val positionRequest = Request.Builder()
-                    .url(url)
-                    .addHeader("Cookie", cookieHeader)
-                    .build()
-                
-                Timber.d("Fetching position from: $url")
-                val response = client.newCall(positionRequest).execute()
-
-                if (!response.isSuccessful) {
-                    Timber.e("HTTP request failed: ${response.code} for URL: $url")
-                    
-                    // If we get a 401/403, clear cached cookies and retry
-                    if (response.code == 401 || response.code == 403) {
-                        Timber.w("Session expired (HTTP ${response.code}), clearing cached cookies")
-                        prefs.edit()
-                            .remove("cached_cookies")
-                            .remove("cookie_timestamp")
-                            .apply()
-                        response.close()
-                        throw Exception("Session expired")
-                    }
-                    
-                    android.os.Handler(mainLooper).post {
-                        android.widget.Toast.makeText(this, "Failed to fetch position (HTTP ${response.code})", android.widget.Toast.LENGTH_LONG).show()
-                    }
-                    response.close()
-                    throw Exception("HTTP error")
+                if (!loginSuccess || sessionCookie == null) {
+                    Timber.e("Login failed; cannot fetch position.")
+                    return
                 }
-
+                val response = PositionUtils.makeAuthenticatedRequest(this, url)
+                if (response == null || !response.isSuccessful) {
+                    Timber.e("HTTP request failed: ${response?.code ?: "?"}")
+                    response?.close()
+                    return
+                }
                 val html = response.body?.string() ?: ""
                 response.close()
-                
-                Timber.d("Received response (${html.length} characters)")
-
-                // Parse with Jsoup
                 val doc = Jsoup.parse(html)
                 val positionElement = doc.selectFirst(POSITION_SELECTOR)
                 val newPosition = positionElement?.text() ?: ""
                 Timber.i("Parsed position: '$newPosition'")
-
-                if (positionElement == null) {
-                    Timber.e("Selector '$POSITION_SELECTOR' not found in HTML response")
-                    android.os.Handler(mainLooper).post {
-                        android.widget.Toast.makeText(this, "Could not find position on page.", android.widget.Toast.LENGTH_LONG).show()
-                    }
-                    return
-                }
-
-                // Compare to last value in SharedPreferences
                 val lastPosition = prefs.getString("last_position", null)
-
                 if (newPosition.isNotEmpty() && newPosition != lastPosition) {
-                    // Save new value
                     prefs.edit().putString("last_position", newPosition).apply()
                     showPositionChangeNotification("Position Update", "Position changed: $newPosition")
                     Timber.i("Position changed from '$lastPosition' to '$newPosition'")
@@ -261,9 +251,6 @@ class PositionMonitorService : Service() {
                     backoff *= 2 // Exponential backoff
                 } else {
                     Timber.e("Failed after $maxAttempts attempts, giving up")
-                    android.os.Handler(mainLooper).post {
-                        android.widget.Toast.makeText(this, "Failed after $maxAttempts attempts.", android.widget.Toast.LENGTH_LONG).show()
-                    }
                 }
             }
         }
@@ -360,29 +347,18 @@ class PositionMonitorService : Service() {
         }
     }
 
-    private fun isOnStoreWifi(context: Context, storeSsid: String): Boolean {
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val network = connectivityManager.activeNetwork ?: return false
-            val networkCapabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-            if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-                val info = wifiManager.connectionInfo
-                val currentSsid = info.ssid?.replace("\"", "")
-                return currentSsid == storeSsid
-            }
-        } else {
-            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-            val info = wifiManager.connectionInfo
-            val currentSsid = info.ssid?.replace("\"", "")
-            return currentSsid == storeSsid
-        }
-        return false
-    }
-
     override fun onDestroy() {
         isMonitoring = false
         scope.cancel()
+        
+        // Unregister network callback
+        networkCallback?.let { callback ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                connectivityManager.unregisterNetworkCallback(callback)
+            }
+        }
+        
         super.onDestroy()
     }
 

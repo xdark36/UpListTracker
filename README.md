@@ -186,12 +186,21 @@ The app uses Timber for comprehensive logging:
 
 ## Permissions
 
-The app requires the following permissions:
-- **INTERNET**: For web requests
-- **ACCESS_NETWORK_STATE**: For WiFi connectivity checks
-- **ACCESS_WIFI_STATE**: For WiFi SSID detection
-- **POST_NOTIFICATIONS**: For position change alerts (Android 13+)
-- **FOREGROUND_SERVICE**: For continuous monitoring
+- `INTERNET`: Required for network access to fetch queue/sales position.
+- `ACCESS_WIFI_STATE`, `ACCESS_NETWORK_STATE`: Required to check if the device is on the correct store WiFi.
+- `FOREGROUND_SERVICE`: Required for real-time monitoring in the background.
+- `POST_NOTIFICATIONS`: Required for sending notifications (Android 13+).
+- `RECEIVE_BOOT_COMPLETED`: Allows the app to auto-restart monitoring after device reboot (if enabled in settings).
+- `ACCESS_FINE_LOCATION`: **Required on Android 9+** to read the current WiFi SSID. The app requests this permission at runtime. If denied, monitoring is paused and a banner is shown.
+
+## Session & Cookie Management
+
+- All login, session, and cookie logic is now unified in `PositionUtils`. Both the Activity and Service use this utility for authentication, session caching, and making authenticated requests. This ensures robust, DRY, and consistent session handling throughout the app.
+
+## User Experience
+
+- If location permission is denied, the app will show a banner and pause monitoring until permission is granted.
+- The app is resilient to network interruptions and process kills, and will always request the necessary permissions at runtime.
 
 ## Troubleshooting
 

@@ -29,6 +29,8 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.content.ContextCompat
 import androidx.activity.result.contract.ActivityResultContracts
+import android.Manifest
+import androidx.core.app.ActivityCompat
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -42,6 +44,19 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, "Notification permission granted", Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(this, "Notification permission denied", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // Permission launcher for location (Android 9+)
+    private val requestLocationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            fetchAndDisplayPosition()
+        } else {
+            val bannerText = findViewById<TextView>(R.id.bannerText)
+            showBanner(bannerText, "Location permission required for WiFi check", false)
+            updateStatusIndicator(findViewById(R.id.statusText), MonitorState.OFFLINE)
         }
     }
 
@@ -146,6 +161,12 @@ class MainActivity : ComponentActivity() {
         val bannerText = findViewById<TextView>(R.id.bannerText)
         showSpinner(progressBar, true)
         positionTextView.text = "Loading…"
+        // Check location permission before WiFi check
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !hasLocationPermission()) {
+            requestLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            showSpinner(progressBar, false)
+            return
+        }
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 if (!isOnStoreWifi(this@MainActivity, ssid)) {
@@ -157,107 +178,40 @@ class MainActivity : ComponentActivity() {
                     }
                     return@launch
                 }
-                
-                val client = OkHttpClient()
-                
-                // Get credentials from SharedPreferences
+                // Use PositionUtils for login/session/auth
+                val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
                 val loginUrl = prefs.getString("login_url", "https://selling1.vcfcorp.com/") ?: "https://selling1.vcfcorp.com/"
                 val empNumber = prefs.getString("emp_number", "90045") ?: "90045"
                 val userPassword = prefs.getString("user_password", "03") ?: "03"
-                
-                // Check if we have cached cookies and if they're still valid
-                val cachedCookies = prefs.getString("cached_cookies", null)
-                val cookieTimestamp = prefs.getLong("cookie_timestamp", 0L)
-                val currentTime = System.currentTimeMillis()
-                val cookieAge = currentTime - cookieTimestamp
-                val cookieValidDuration = 30 * 60 * 1000L // 30 minutes
-                
-                var cookieHeader = ""
-                var loginSuccess = false
-                
-                if (cachedCookies != null && cookieAge < cookieValidDuration) {
-                    // Use cached cookies
-                    cookieHeader = cachedCookies
-                    loginSuccess = true
-                    android.util.Log.d("MainActivity", "Using cached cookies (age: ${cookieAge / 1000}s)")
-                } else {
-                    // Need to login again
-                    android.util.Log.d("MainActivity", "Cached cookies expired or missing, logging in...")
-                    
-                    val loginRequestBody = okhttp3.FormBody.Builder()
-                        .add("emp_number", empNumber)
-                        .add("user_password", userPassword)
-                        .build()
-                    val loginRequest = Request.Builder()
-                        .url(loginUrl)
-                        .post(loginRequestBody)
-                        .build()
-                    val loginResponse = client.newCall(loginRequest).execute()
-                    val cookies = loginResponse.headers("Set-Cookie")
-                    loginSuccess = cookies.isNotEmpty() && loginResponse.isSuccessful
-                    loginResponse.close()
-                    
-                    if (loginSuccess) {
-                        cookieHeader = cookies.joinToString("; ")
-                        // Cache the cookies with timestamp
-                        prefs.edit()
-                            .putString("cached_cookies", cookieHeader)
-                            .putLong("cookie_timestamp", currentTime)
-                            .apply()
-                        android.util.Log.d("MainActivity", "Login successful, cookies cached")
-                    } else {
-                        android.util.Log.e("MainActivity", "Login failed: no cookies or bad response")
-                        runOnUiThread {
-                            showSpinner(progressBar, false)
-                            positionTextView.text = "Login Failed\nLast checked: ${getTimestamp()}"
-                            showBanner(bannerText, "Login failed. Check credentials.", success = false)
-                            onError?.invoke("Login failed. Check credentials.")
-                        }
-                        return@launch
-                    }
+                var sessionCookie = PositionUtils.getSessionCookie(this@MainActivity)
+                var loginSuccess = sessionCookie != null
+                if (!loginSuccess) {
+                    loginSuccess = PositionUtils.loginAndCacheSession(this@MainActivity, loginUrl, empNumber, userPassword)
+                    sessionCookie = PositionUtils.getSessionCookie(this@MainActivity)
                 }
-
-                // Fetch page with OkHttp, using session cookies
-                val positionRequest = Request.Builder()
-                    .url(url)
-                    .addHeader("Cookie", cookieHeader)
-                    .build()
-                val response = client.newCall(positionRequest).execute()
-
-                if (!response.isSuccessful) {
-                    android.util.Log.e("MainActivity", "HTTP request failed: ${response.code}")
-                    
-                    // If we get a 401/403, clear cached cookies and retry
-                    if (response.code == 401 || response.code == 403) {
-                        android.util.Log.d("MainActivity", "Session expired, clearing cached cookies")
-                        prefs.edit()
-                            .remove("cached_cookies")
-                            .remove("cookie_timestamp")
-                            .apply()
-                        response.close()
-                        runOnUiThread {
-                            showSpinner(progressBar, false)
-                            positionTextView.text = "Session Expired\nLast checked: ${getTimestamp()}"
-                            showBanner(bannerText, "Session expired. Please refresh.", success = false)
-                            onError?.invoke("Session expired. Please refresh.")
-                        }
-                        return@launch
-                    }
-                    
-                    response.close()
+                if (!loginSuccess || sessionCookie == null) {
                     runOnUiThread {
                         showSpinner(progressBar, false)
-                        positionTextView.text = "HTTP Error\nLast checked: ${getTimestamp()}"
-                        showBanner(bannerText, "Failed to fetch position (HTTP ${response.code})", success = false)
-                        onError?.invoke("Failed to fetch position (HTTP ${response.code})")
+                        positionTextView.text = "Login Failed\nLast checked: ${getTimestamp()}"
+                        showBanner(bannerText, "Login failed. Check credentials.", success = false)
+                        onError?.invoke("Login failed. Check credentials.")
                     }
                     return@launch
                 }
-
+                val response = PositionUtils.makeAuthenticatedRequest(this@MainActivity, url)
+                if (response == null || !response.isSuccessful) {
+                    runOnUiThread {
+                        showSpinner(progressBar, false)
+                        positionTextView.text = "HTTP Error\nLast checked: ${getTimestamp()}"
+                        showBanner(bannerText, "Failed to fetch position (HTTP ${response?.code ?: "?"})", success = false)
+                        onError?.invoke("Failed to fetch position (HTTP ${response?.code ?: "?"})")
+                    }
+                    response?.close()
+                    return@launch
+                }
                 val html = response.body?.string() ?: ""
                 response.close()
                 val position = extractPosition(html)
-                
                 runOnUiThread {
                     showSpinner(progressBar, false)
                     positionTextView.text = "Position: $position\nLast checked: ${getTimestamp()}"
@@ -265,7 +219,6 @@ class MainActivity : ComponentActivity() {
                     onSuccess?.invoke()
                 }
             } catch (e: Exception) {
-                android.util.Log.e("MainActivity", "Error fetching position", e)
                 runOnUiThread {
                     showSpinner(progressBar, false)
                     positionTextView.text = "Error\nLast checked: ${getTimestamp()}"
@@ -277,6 +230,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun isOnStoreWifi(context: Context, storeSsid: String): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !hasLocationPermission()) {
+            return false // Will trigger permission request
+        }
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val network = connectivityManager.activeNetwork ?: return false
@@ -378,5 +334,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 }
