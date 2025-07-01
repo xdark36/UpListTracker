@@ -277,6 +277,9 @@ class PositionMonitorService : Service() {
         val refreshIntent = PendingIntent.getService(this, 2, Intent(this, PositionMonitorService::class.java).apply {
             action = ACTION_REFRESH
         }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val stopIntent = PendingIntent.getService(this, 4, Intent(this, PositionMonitorService::class.java).apply {
+            action = ACTION_STOP
+        }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Position Monitor")
             .setContentText("Monitoring queue position...")
@@ -285,6 +288,7 @@ class PositionMonitorService : Service() {
             .setOngoing(true)
             .addAction(R.drawable.ic_pause_circle, "Pause", pauseIntent)
             .addAction(R.drawable.ic_refresh, "Refresh", refreshIntent)
+            .addAction(R.drawable.ic_stop_circle, "Stop", stopIntent)
             .build()
     }
 
