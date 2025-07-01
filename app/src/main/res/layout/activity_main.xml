@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/swipeRefreshLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:id="@+id/mainLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@color/background">
+
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Monitoring: Active"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:padding="4dp"
+            android:textColor="@color/status_active"
+            android:drawableLeft="@drawable/ic_check_circle"
+            android:drawablePadding="8dp"
+            android:contentDescription="Monitoring status" />
+
+        <TextView
+            android:id="@+id/bannerText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="16sp"
+            android:gravity="center"
+            android:padding="8dp"
+            android:visibility="gone"
+            android:background="@color/banner_bg"
+            android:textColor="@color/banner_text"
+            android:contentDescription="Status banner" />
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            style="?android:attr/progressBarStyleLarge"
+            android:contentDescription="Loading spinner" />
+
+        <TextView
+            android:id="@+id/positionText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Loading…"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:padding="24dp"
+            android:background="@color/banner_bg"
+            android:textColor="@color/position_text"
+            android:gravity="center"
+            android:contentDescription="Current position value" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/settingsButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Settings"
+            android:icon="@drawable/ic_settings"
+            app:iconPadding="8dp"
+            android:contentDescription="Open settings"
+            android:layout_marginTop="16dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+    </LinearLayout>
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout> 
