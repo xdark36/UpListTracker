@@ -38,6 +38,9 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
 import com.google.android.material.snackbar.Snackbar
 import androidx.activity.viewModels
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -110,23 +113,29 @@ class MainActivity : ComponentActivity() {
             val statusText = findViewById<TextView>(R.id.statusText)
             val settingsButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.settingsButton)
             val copyButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.copyButton)
+            val shareButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.shareButton)
+            val refreshButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.refreshButton)
             
             if (swipeRefreshLayout == null || bannerText == null || progressBar == null || 
-                positionTextView == null || statusText == null || settingsButton == null || copyButton == null) {
+                positionTextView == null || statusText == null || settingsButton == null || 
+                copyButton == null || shareButton == null || refreshButton == null) {
                 throw Exception("One or more UI elements not found")
             }
             
             val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
             // Initial display
             val lastPosition = prefs.getString("last_position", "--")
-            positionTextView.text = "Position: $lastPosition"
+            val lastChecked = prefs.getString("last_checked", "Never")
+            updatePositionDisplay(positionTextView, lastPosition, lastChecked)
             updateStatusIndicator(statusText, MonitorState.Active)
+            
             // Listen for changes
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-                if (key == "last_position") {
+                if (key == "last_position" || key == "last_checked") {
                     val newPosition = prefs.getString("last_position", "--")
+                    val newChecked = prefs.getString("last_checked", "Never")
                     runOnUiThread {
-                        positionTextView.text = "Position: $newPosition"
+                        updatePositionDisplay(positionTextView, newPosition, newChecked)
                         showBanner(bannerText, "Position updated!", success = true)
                     }
                 }
@@ -144,7 +153,32 @@ class MainActivity : ComponentActivity() {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                 val clip = android.content.ClipData.newPlainText("Position", position)
                 clipboard.setPrimaryClip(clip)
+                provideHapticFeedback()
                 Toast.makeText(this, "Position copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
+
+            // Share button
+            shareButton.setOnClickListener {
+                val position = prefs.getString("last_position", "--")
+                sharePosition(position)
+            }
+
+            // Refresh button
+            refreshButton.setOnClickListener {
+                fetchAndDisplayPosition(
+                    onSuccess = {
+                        showBanner(bannerText, "Position refreshed!", success = true)
+                        updateStatusIndicator(statusText, MonitorState.Active)
+                    },
+                    onError = { msg ->
+                        showBanner(bannerText, msg, success = false)
+                        if (msg.contains("Offline", true)) {
+                            updateStatusIndicator(statusText, MonitorState.Offline)
+                        } else {
+                            updateStatusIndicator(statusText, MonitorState.Paused)
+                        }
+                    }
+                )
             }
 
             // True pull-to-refresh
@@ -214,7 +248,9 @@ class MainActivity : ComponentActivity() {
                 if (!isOnStoreWifi(this@MainActivity, ssid)) {
                     runOnUiThread {
                         showSpinner(progressBar, false)
-                        positionTextView.text = "Offline\nLast checked: ${getTimestamp()}"
+                        val timestamp = getTimestamp()
+                        prefs.edit().putString("last_checked", timestamp).apply()
+                        updatePositionDisplay(positionTextView, "Offline", timestamp)
                         showBanner(bannerText, "Offline: Not on store WiFi", success = false)
                         onError?.invoke("Offline: Not on store WiFi")
                     }
@@ -234,7 +270,9 @@ class MainActivity : ComponentActivity() {
                 if (!loginSuccess || sessionCookie == null) {
                     runOnUiThread {
                         showSpinner(progressBar, false)
-                        positionTextView.text = "Login Failed\nLast checked: ${getTimestamp()}"
+                        val timestamp = getTimestamp()
+                        prefs.edit().putString("last_checked", timestamp).apply()
+                        updatePositionDisplay(positionTextView, "Login Failed", timestamp)
                         showBanner(bannerText, "Login failed. Check credentials.", success = false)
                         onError?.invoke("Login failed. Check credentials.")
                     }
@@ -244,7 +282,9 @@ class MainActivity : ComponentActivity() {
                 if (response == null || !response.isSuccessful) {
                     runOnUiThread {
                         showSpinner(progressBar, false)
-                        positionTextView.text = "HTTP Error\nLast checked: ${getTimestamp()}"
+                        val timestamp = getTimestamp()
+                        prefs.edit().putString("last_checked", timestamp).apply()
+                        updatePositionDisplay(positionTextView, "HTTP Error", timestamp)
                         showBanner(bannerText, "Failed to fetch position (HTTP ${response?.code ?: "?"})", success = false)
                         onError?.invoke("Failed to fetch position (HTTP ${response?.code ?: "?"})")
                     }
@@ -256,14 +296,21 @@ class MainActivity : ComponentActivity() {
                 val position = extractPosition(html)
                 runOnUiThread {
                     showSpinner(progressBar, false)
-                    positionTextView.text = "Position: $position\nLast checked: ${getTimestamp()}"
+                    val timestamp = getTimestamp()
+                    prefs.edit()
+                        .putString("last_position", position)
+                        .putString("last_checked", timestamp)
+                        .apply()
+                    updatePositionDisplay(positionTextView, position, timestamp)
                     showBanner(bannerText, "Fetched position!", success = true)
                     onSuccess?.invoke()
                 }
             } catch (e: Exception) {
                 runOnUiThread {
                     showSpinner(progressBar, false)
-                    positionTextView.text = "Error\nLast checked: ${getTimestamp()}"
+                    val timestamp = getTimestamp()
+                    prefs.edit().putString("last_checked", timestamp).apply()
+                    updatePositionDisplay(positionTextView, "Error", timestamp)
                     showBanner(bannerText, "Error: ${e.localizedMessage}", success = false)
                     onError?.invoke("Error: ${e.localizedMessage}")
                 }
@@ -397,5 +444,51 @@ class MainActivity : ComponentActivity() {
         return ContextCompat.checkSelfPermission(
             this, Manifest.permission.ACCESS_FINE_LOCATION
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun updatePositionDisplay(positionTextView: TextView, position: String, lastChecked: String) {
+        positionTextView.text = "Position: $position\nLast checked: $lastChecked"
+    }
+
+    private fun provideHapticFeedback() {
+        try {
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                vibratorManager.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            }
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(50)
+            }
+        } catch (e: Exception) {
+            // Ignore vibration errors
+            android.util.Log.d("MainActivity", "Haptic feedback not available: ${e.message}")
+        }
+    }
+
+    private fun sharePosition(position: String) {
+        try {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "My Current Position")
+                putExtra(Intent.EXTRA_TEXT, "My current position is: $position")
+            }
+            
+            val chooser = Intent.createChooser(shareIntent, "Share Position")
+            if (shareIntent.resolveActivity(packageManager) != null) {
+                startActivity(chooser)
+                provideHapticFeedback()
+            } else {
+                Toast.makeText(this, "No apps available to share", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Error sharing position: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 }
