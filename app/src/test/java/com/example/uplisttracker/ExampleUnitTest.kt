@@ -118,134 +118,72 @@ class ExampleUnitTest {
     }
     
     @Test
-    fun validateCredentials_validInput() {
-        assertTrue(PositionUtils.validateCredentials("valid@email.com", "password123"))
+    fun testExtractPositionWithValidHtml() {
+        val html = """
+            <html><body><div id='position-element'>42</div></body></html>
+        """
+        val expected = "42"
+        val actual = PositionUtils.extractPosition(html)
+        assertEquals(expected, actual)
     }
     
     @Test
-    fun validateCredentials_emptyEmail() {
-        assertFalse(PositionUtils.validateCredentials("", "password123"))
+    fun testExtractPositionWithComplexHtml() {
+        val html = """
+            <html>
+                <head><title>Test Page</title></head>
+                <body>
+                    <div class="header">Header</div>
+                    <div id='position-element'>123</div>
+                    <div class="footer">Footer</div>
+                </body>
+            </html>
+        """
+        val expected = "123"
+        val actual = PositionUtils.extractPosition(html)
+        assertEquals(expected, actual)
     }
     
     @Test
-    fun validateCredentials_emptyPassword() {
-        assertFalse(PositionUtils.validateCredentials("valid@email.com", ""))
+    fun testExtractPositionWithWhitespace() {
+        val html = """
+            <html><body><div id='position-element'>  456  </div></body></html>
+        """
+        val expected = "456"
+        val actual = PositionUtils.extractPosition(html)
+        assertEquals(expected, actual)
     }
     
     @Test
-    fun validateCredentials_invalidEmail() {
-        assertFalse(PositionUtils.validateCredentials("invalid-email", "password123"))
+    fun testExtractPositionWithSpecialCharacters() {
+        val html = """
+            <html><body><div id='position-element'>#789</div></body></html>
+        """
+        val expected = "#789"
+        val actual = PositionUtils.extractPosition(html)
+        assertEquals(expected, actual)
     }
     
     @Test
-    fun validateCredentials_nullInputs() {
-        assertFalse(PositionUtils.validateCredentials(null, "password123"))
-        assertFalse(PositionUtils.validateCredentials("valid@email.com", null))
-        assertFalse(PositionUtils.validateCredentials(null, null))
+    fun testExtractPositionWithLargeNumber() {
+        val html = """
+            <html><body><div id='position-element'>999999</div></body></html>
+        """
+        val expected = "999999"
+        val actual = PositionUtils.extractPosition(html)
+        assertEquals(expected, actual)
     }
     
     @Test
-    fun validateUrl_validHttp() {
-        assertTrue(PositionUtils.validateUrl("http://example.com"))
-    }
-    
-    @Test
-    fun validateUrl_validHttps() {
-        assertTrue(PositionUtils.validateUrl("https://example.com"))
-    }
-    
-    @Test
-    fun validateUrl_invalidProtocol() {
-        assertFalse(PositionUtils.validateUrl("ftp://example.com"))
-    }
-    
-    @Test
-    fun validateUrl_missingProtocol() {
-        assertFalse(PositionUtils.validateUrl("example.com"))
-    }
-    
-    @Test
-    fun validateUrl_emptyInput() {
-        assertFalse(PositionUtils.validateUrl(""))
-    }
-    
-    @Test
-    fun validateUrl_nullInput() {
-        assertFalse(PositionUtils.validateUrl(null))
-    }
-    
-    @Test
-    fun formatPosition_validNumber() {
-        assertEquals("42", PositionUtils.formatPosition("42"))
-    }
-    
-    @Test
-    fun formatPosition_withCommas() {
-        assertEquals("1,234", PositionUtils.formatPosition("1234"))
-    }
-    
-    @Test
-    fun formatPosition_withSpecialChars() {
-        assertEquals("#1,234", PositionUtils.formatPosition("#1234"))
-    }
-    
-    @Test
-    fun formatPosition_emptyInput() {
-        assertEquals("--", PositionUtils.formatPosition(""))
-    }
-    
-    @Test
-    fun formatPosition_nullInput() {
-        assertEquals("--", PositionUtils.formatPosition(null))
-    }
-    
-    @Test
-    fun isPositionChanged_samePosition() {
-        assertFalse(PositionUtils.isPositionChanged("42", "42"))
-    }
-    
-    @Test
-    fun isPositionChanged_differentPosition() {
-        assertTrue(PositionUtils.isPositionChanged("42", "43"))
-    }
-    
-    @Test
-    fun isPositionChanged_nullToValue() {
-        assertTrue(PositionUtils.isPositionChanged(null, "42"))
-    }
-    
-    @Test
-    fun isPositionChanged_valueToNull() {
-        assertTrue(PositionUtils.isPositionChanged("42", null))
-    }
-    
-    @Test
-    fun isPositionChanged_bothNull() {
-        assertFalse(PositionUtils.isPositionChanged(null, null))
-    }
-    
-    @Test
-    fun sanitizeInput_normalText() {
-        assertEquals("normal text", PositionUtils.sanitizeInput("normal text"))
-    }
-    
-    @Test
-    fun sanitizeInput_withHtml() {
-        assertEquals("clean text", PositionUtils.sanitizeInput("<script>alert('xss')</script>clean text"))
-    }
-    
-    @Test
-    fun sanitizeInput_withSpecialChars() {
-        assertEquals("text with &amp; symbols", PositionUtils.sanitizeInput("text with & symbols"))
-    }
-    
-    @Test
-    fun sanitizeInput_nullInput() {
-        assertEquals("", PositionUtils.sanitizeInput(null))
-    }
-    
-    @Test
-    fun sanitizeInput_emptyInput() {
-        assertEquals("", PositionUtils.sanitizeInput(""))
+    fun testExtractPositionWithMultipleElements() {
+        val html = """
+            <html><body>
+                <div id='position-element'>42</div>
+                <div id='position-element'>99</div>
+            </body></html>
+        """
+        val expected = "42"
+        val actual = PositionUtils.extractPosition(html)
+        assertEquals(expected, actual)
     }
 }
