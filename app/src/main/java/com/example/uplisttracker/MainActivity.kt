@@ -2,8 +2,6 @@ package com.example.uplisttracker
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.enableEdgeToEdge
-import dagger.hilt.android.AndroidEntryPoint
 import android.net.wifi.WifiManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -85,7 +83,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
         
         // Request permissions on startup
@@ -127,7 +124,7 @@ class MainActivity : ComponentActivity() {
             // Initial display
             val lastPosition = prefs.getString("last_position", "--")
             val lastChecked = prefs.getString("last_checked", "Never")
-            updatePositionDisplay(positionTextView, lastPosition, lastChecked)
+            updatePositionDisplay(positionTextView, lastPosition ?: "--", lastChecked ?: "Never")
             updateStatusIndicator(statusText, MonitorState.Active)
             
             // Listen for changes
@@ -136,7 +133,7 @@ class MainActivity : ComponentActivity() {
                     val newPosition = prefs.getString("last_position", "--")
                     val newChecked = prefs.getString("last_checked", "Never")
                     runOnUiThread {
-                        updatePositionDisplay(positionTextView, newPosition, newChecked)
+                        updatePositionDisplay(positionTextView, newPosition ?: "--", newChecked ?: "Never")
                         showBanner(bannerText, "Position updated!", success = true)
                     }
                 }
@@ -256,7 +253,7 @@ class MainActivity : ComponentActivity() {
                         showSpinner(progressBar, false)
                         val timestamp = getTimestamp()
                         prefs.edit().putString("last_checked", timestamp).apply()
-                        updatePositionDisplay(positionTextView, "Offline", timestamp)
+                        updatePositionDisplay(positionTextView, "Offline", timestamp ?: "Never")
                         showBanner(bannerText, "Offline: Not on store WiFi", success = false)
                         onError?.invoke("Offline: Not on store WiFi")
                     }
@@ -278,7 +275,7 @@ class MainActivity : ComponentActivity() {
                         showSpinner(progressBar, false)
                         val timestamp = getTimestamp()
                         prefs.edit().putString("last_checked", timestamp).apply()
-                        updatePositionDisplay(positionTextView, "Login Failed", timestamp)
+                        updatePositionDisplay(positionTextView, "Login Failed", timestamp ?: "Never")
                         showBanner(bannerText, "Login failed. Check credentials.", success = false)
                         onError?.invoke("Login failed. Check credentials.")
                     }
@@ -290,7 +287,7 @@ class MainActivity : ComponentActivity() {
                         showSpinner(progressBar, false)
                         val timestamp = getTimestamp()
                         prefs.edit().putString("last_checked", timestamp).apply()
-                        updatePositionDisplay(positionTextView, "HTTP Error", timestamp)
+                        updatePositionDisplay(positionTextView, "HTTP Error", timestamp ?: "Never")
                         showBanner(bannerText, "Failed to fetch position (HTTP ${response?.code ?: "?"})", success = false)
                         onError?.invoke("Failed to fetch position (HTTP ${response?.code ?: "?"})")
                     }
@@ -307,7 +304,7 @@ class MainActivity : ComponentActivity() {
                         .putString("last_position", position)
                         .putString("last_checked", timestamp)
                         .apply()
-                    updatePositionDisplay(positionTextView, position, timestamp)
+                    updatePositionDisplay(positionTextView, position ?: "--", timestamp ?: "Never")
                     showBanner(bannerText, "Fetched position!", success = true)
                     onSuccess?.invoke()
                 }
@@ -316,7 +313,7 @@ class MainActivity : ComponentActivity() {
                     showSpinner(progressBar, false)
                     val timestamp = getTimestamp()
                     prefs.edit().putString("last_checked", timestamp).apply()
-                    updatePositionDisplay(positionTextView, "Error", timestamp)
+                    updatePositionDisplay(positionTextView, "Error", timestamp ?: "Never")
                     showBanner(bannerText, "Error: ${e.localizedMessage}", success = false)
                     onError?.invoke("Error: ${e.localizedMessage}")
                 }
@@ -452,7 +449,7 @@ class MainActivity : ComponentActivity() {
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
-    private fun updatePositionDisplay(positionTextView: TextView, position: String?, lastChecked: String?) {
+    private fun updatePositionDisplay(positionTextView: TextView, position: String, lastChecked: String) {
         val displayText = if (position == null || position == "--") {
             "Position: --"
         } else {
