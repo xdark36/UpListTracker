@@ -231,13 +231,24 @@ class PositionMonitorService : Service() {
                 val newPosition = PositionUtils.extractPosition(html)
                 Timber.i("Parsed position: '$newPosition'")
                 val lastPosition = prefs.getString("last_position", null)
-                if (newPosition.isNotEmpty() && newPosition != "--" && newPosition != lastPosition) {
-                    prefs.edit().putString("last_position", newPosition).apply()
-                    showPositionChangeNotification("Position Update", "Position changed: $newPosition")
-                    Timber.i("Position changed from '$lastPosition' to '$newPosition'")
+                
+                // Always update the position display if we got a valid position
+                if (newPosition.isNotEmpty() && newPosition != "--") {
+                    val timestamp = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+                    prefs.edit()
+                        .putString("last_position", newPosition)
+                        .putString("last_checked", timestamp)
+                        .apply()
+                    
+                    // Check if position actually changed
+                    if (newPosition != lastPosition) {
+                        showPositionChangeNotification("Position Update", "Position changed: $newPosition")
+                        Timber.i("Position changed from '$lastPosition' to '$newPosition'")
+                    } else {
+                        Timber.d("Position unchanged: '$newPosition'")
+                    }
+                    
                     PositionRepository.updatePosition(newPosition)
-                } else if (newPosition.isNotEmpty() && newPosition != "--") {
-                    Timber.d("Position unchanged: '$newPosition'")
                 } else {
                     Timber.w("Position element found but value is empty")
                 }

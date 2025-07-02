@@ -102,6 +102,16 @@ class SettingsActivity : AppCompatActivity() {
         ssidStatus.setPadding(0, 0, 0, 16)
         layout.addView(ssidStatus)
         
+        // Hidden SSID Help
+        if (currentSsid == "<unknown>" || currentSsid == "SSID_UNKNOWN") {
+            val hiddenSsidHelp = TextView(this)
+            hiddenSsidHelp.text = "⚠️ Hidden Network Detected\n\nIf your store's WiFi is hidden (not broadcasting its name), you may need to:\n\n1. Manually connect to the network first\n2. Ensure location permission is granted\n3. Contact your IT department if issues persist"
+            hiddenSsidHelp.textSize = 12f
+            hiddenSsidHelp.setPadding(0, 8, 0, 16)
+            hiddenSsidHelp.setTextColor(0xFFFF5722.toInt())
+            layout.addView(hiddenSsidHelp)
+        }
+        
         // Save Button
         val saveButton = Button(this)
         saveButton.text = "Save Settings"
@@ -138,6 +148,15 @@ class SettingsActivity : AppCompatActivity() {
             testConnection()
         }
         layout.addView(testConnectionButton)
+        
+        // Check Permissions Button
+        val checkPermissionsButton = Button(this)
+        checkPermissionsButton.text = "Check Permissions"
+        checkPermissionsButton.setPadding(0, 8, 0, 0)
+        checkPermissionsButton.setOnClickListener {
+            checkPermissions()
+        }
+        layout.addView(checkPermissionsButton)
         
         // Debug: Force Error Button (only in debug builds)
         if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
@@ -245,5 +264,65 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
         }.start()
+    }
+    
+    private fun checkPermissions() {
+        val locationPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        
+        val notificationPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                this, android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Not required on older Android versions
+        }
+        
+        val locationServicesEnabled = try {
+            val locationManager = getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+            locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+            locationManager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
+        } catch (e: Exception) {
+            false
+        }
+        
+        val message = StringBuilder()
+        message.append("Permission Status:\n\n")
+        message.append("📍 Location Permission: ${if (locationPermission) "✅ Granted" else "❌ Denied"}\n")
+        message.append("🔔 Notification Permission: ${if (notificationPermission) "✅ Granted" else "❌ Denied"}\n")
+        message.append("📍 Location Services: ${if (locationServicesEnabled) "✅ Enabled" else "❌ Disabled"}\n\n")
+        
+        if (!locationPermission || !notificationPermission || !locationServicesEnabled) {
+            message.append("Issues found:\n")
+            if (!locationPermission) {
+                message.append("• Location permission is required to detect WiFi SSID\n")
+            }
+            if (!notificationPermission) {
+                message.append("• Notification permission is required for position alerts\n")
+            }
+            if (!locationServicesEnabled) {
+                message.append("• Location services must be enabled\n")
+            }
+            message.append("\nTap 'Fix Issues' to open settings")
+        } else {
+            message.append("✅ All permissions are properly configured!")
+        }
+        
+        val dialog = android.app.AlertDialog.Builder(this)
+            .setTitle("Permission Check")
+            .setMessage(message.toString())
+            .setPositiveButton("OK") { _, _ -> }
+            .create()
+        
+        if (!locationPermission || !notificationPermission || !locationServicesEnabled) {
+            dialog.setButton(android.app.AlertDialog.BUTTON_NEUTRAL, "Fix Issues") { _, _ ->
+                startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = android.net.Uri.fromParts("package", packageName, null)
+                })
+            }
+        }
+        
+        dialog.show()
     }
 } 

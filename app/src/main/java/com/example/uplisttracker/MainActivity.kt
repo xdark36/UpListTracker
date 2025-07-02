@@ -61,7 +61,8 @@ class MainActivity : ComponentActivity() {
         if (isGranted) {
             Toast.makeText(this, "Notification permission granted", Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(this, "Notification permission denied", Toast.LENGTH_LONG).show()
+            // Show dialog explaining why notifications are important
+            showNotificationPermissionDialog()
         }
     }
 
@@ -73,7 +74,8 @@ class MainActivity : ComponentActivity() {
             // Location permission granted - monitoring will start automatically when on store WiFi
             Toast.makeText(this, "Location permission granted", Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(this, "Location permission is required to monitor Wi-Fi.", Toast.LENGTH_LONG).show()
+            // Show dialog explaining why location is needed
+            showLocationPermissionDialog()
         }
     }
 
@@ -81,7 +83,7 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (!isGranted) {
-            Toast.makeText(this, "Notification permission required for alerts", Toast.LENGTH_LONG).show()
+            showNotificationPermissionDialog()
         }
     }
 
@@ -91,13 +93,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         
-        // Request permissions on startup
+        // Request permissions on startup with better user guidance
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            requestLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            showLocationPermissionDialog()
         }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            showNotificationPermissionDialog()
         }
         
         // Auto-start the position monitoring service
@@ -137,9 +139,12 @@ class MainActivity : ComponentActivity() {
                 if (key == "last_position" || key == "last_checked") {
                     val newPosition = prefs.getString("last_position", "--")
                     val newChecked = prefs.getString("last_checked", "Never")
+                    android.util.Log.d("MainActivity", "SharedPreferences changed - key: $key, position: $newPosition, checked: $newChecked")
                     runOnUiThread {
                         updatePositionDisplay(positionTextView, newPosition ?: "--", newChecked ?: "Never")
-                        showBanner(bannerText, "Position updated!", success = true)
+                        if (key == "last_position") {
+                            showBanner(bannerText, "Position updated: $newPosition", success = true)
+                        }
                     }
                 }
             }
@@ -206,12 +211,8 @@ class MainActivity : ComponentActivity() {
             android.widget.Toast.makeText(this, "Error initializing app: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
         }
 
-        lifecycleScope.launch {
-            PositionRepository.position.collectLatest { newPosition ->
-                val bannerText = findViewById<TextView>(R.id.bannerText)
-                showBanner(bannerText, "Position updated: $newPosition", true)
-            }
-        }
+        // Note: Position updates are handled via SharedPreferences listener above
+        // This ensures UI updates when the service fetches new position data
 
         checkAndRequestLocationPermissions()
     }
@@ -331,6 +332,11 @@ class MainActivity : ComponentActivity() {
     // Monitoring is now automatic when connected to store WiFi
 
     private fun isOnStoreWifi(context: Context, storeSsid: String): Boolean {
+        if (!hasLocationPermission()) {
+            android.util.Log.w("MainActivity", "Location permission not granted; cannot check SSID.")
+            return false
+        }
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             val network = connectivityManager.activeNetwork ?: return false
@@ -339,31 +345,39 @@ class MainActivity : ComponentActivity() {
                 val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                 val info = wifiManager.connectionInfo
                 val currentSsid = info.ssid?.replace("\"", "")
+                
+                // Handle unknown SSID cases
                 if (currentSsid.equals("SSID_UNKNOWN", true) || currentSsid.equals("<unknown ssid>", true)) {
-                    android.util.Log.w("MainActivity", "WiFi SSID is unknown, retrying...")
+                    android.util.Log.w("MainActivity", "WiFi SSID is unknown - network may be hidden or not broadcasting")
                     runOnUiThread {
                         val bannerText = findViewById<TextView>(R.id.bannerText)
-                        showBanner(bannerText, "WiFi SSID unknown, retrying...", false)
+                        showBanner(bannerText, "WiFi SSID unknown - check if network is hidden", false)
                     }
-                    Thread.sleep(1500)
                     return false
                 }
-                return currentSsid == storeSsid
+                
+                // Check if we're connected to the store WiFi
+                val isConnected = currentSsid == storeSsid
+                android.util.Log.d("MainActivity", "Current SSID: '$currentSsid', Store SSID: '$storeSsid', Connected: $isConnected")
+                return isConnected
             }
         } else {
             val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
             val info = wifiManager.connectionInfo
             val currentSsid = info.ssid?.replace("\"", "")
+            
             if (currentSsid.equals("SSID_UNKNOWN", true) || currentSsid.equals("<unknown ssid>", true)) {
-                android.util.Log.w("MainActivity", "WiFi SSID is unknown, retrying...")
+                android.util.Log.w("MainActivity", "WiFi SSID is unknown - network may be hidden or not broadcasting")
                 runOnUiThread {
                     val bannerText = findViewById<TextView>(R.id.bannerText)
-                    showBanner(bannerText, "WiFi SSID unknown, retrying...", false)
+                    showBanner(bannerText, "WiFi SSID unknown - check if network is hidden", false)
                 }
-                Thread.sleep(1500)
                 return false
             }
-            return currentSsid == storeSsid
+            
+            val isConnected = currentSsid == storeSsid
+            android.util.Log.d("MainActivity", "Current SSID: '$currentSsid', Store SSID: '$storeSsid', Connected: $isConnected")
+            return isConnected
         }
         return false
     }
@@ -619,5 +633,39 @@ class MainActivity : ComponentActivity() {
                 .setNegativeButton("Cancel", null)
                 .show()
         }
+    }
+
+    private fun showNotificationPermissionDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Notification Permission Required")
+            .setMessage("This app needs notification permission to alert you when your position changes. Without this permission, you won't receive important updates about your queue position.")
+            .setPositiveButton("Grant Permission") { _, _ ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+            .setNegativeButton("Open Settings") { _, _ ->
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = android.net.Uri.fromParts("package", packageName, null)
+                })
+            }
+            .setNeutralButton("Not Now", null)
+            .show()
+    }
+
+    private fun showLocationPermissionDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Location Permission Required")
+            .setMessage("This app needs location permission to detect when you're connected to your store's WiFi network. This ensures monitoring only happens when you're at work.")
+            .setPositiveButton("Grant Permission") { _, _ ->
+                requestLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+            .setNegativeButton("Open Settings") { _, _ ->
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = android.net.Uri.fromParts("package", packageName, null)
+                })
+            }
+            .setNeutralButton("Not Now", null)
+            .show()
     }
 }
