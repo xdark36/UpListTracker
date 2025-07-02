@@ -63,6 +63,7 @@ A Kotlin Android app that monitors a user's "up" position (queue or sales rank) 
 
 ### Position Extraction
 - **Hybrid Extraction Logic**: Supports both legacy and new HTML formats, ensuring compatibility with a wide range of position page structures.
+- **Correct Element Targeting**: Properly extracts position from `#btnSalesUpStatus` element with "Position # X" format.
 
 ### UI/UX Enhancements
 - **Copy Position Button**: Added one-tap copy functionality to main screen
