@@ -223,6 +223,10 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Changelog
 
 ### Latest Update
+- Fixed build system: aligned Hilt, Kotlin, and Android Gradle Plugin versions
+- Added Hilt test dependencies for proper annotation processing
+- Fixed type mismatch issues in MainActivity
+- Removed enableEdgeToEdge references for compatibility
 - Added position history tracking - stores last 10 position changes with timestamps
 - Added "View History" button to display position history in a dialog
 - Added "Clear History" option to reset position history
