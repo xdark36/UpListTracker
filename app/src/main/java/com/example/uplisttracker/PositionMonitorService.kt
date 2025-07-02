@@ -139,7 +139,7 @@ class PositionMonitorService : Service() {
             while (isActive && isMonitoring) {
                 try {
                     val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
-                    val url = prefs.getString("url", "https://selling.vcfcorp.com/position") ?: "https://selling.vcfcorp.com/position"
+                    val url = prefs.getString("url", "https://selling.vcfcorp.com/") ?: "https://selling.vcfcorp.com/"
                     val ssid = prefs.getString("ssid", "Sales") ?: "Sales"
                     val pollingIntervalMs = 15_000L // 15 seconds
                     
@@ -292,7 +292,7 @@ class PositionMonitorService : Service() {
 
     private fun getUrlFromPrefs(): String {
         val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
-        return prefs.getString("url", "https://selling1.vcfcorp.com/position") ?: "https://selling1.vcfcorp.com/position"
+        return prefs.getString("url", "https://selling1.vcfcorp.com/") ?: "https://selling1.vcfcorp.com/"
     }
 
     private fun showPositionChangeNotification(title: String, message: String) {
