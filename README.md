@@ -172,20 +172,49 @@ app/src/test/java/com/example/uplisttracker/
 
 ### Testing
 
-#### Unit Tests
+#### Comprehensive Test Suite
+The app includes a comprehensive testing strategy covering multiple aspects:
+
+##### Unit Tests
 ```bash
 ./gradlew testDebugUnitTest
 ```
+- **PositionUtils Tests**: HTML parsing, validation, and utility functions
+- **Security Tests**: XSS prevention, SQL injection protection, input validation
+- **Performance Tests**: Execution time, memory usage, concurrent operations
+- **Authentication Tests**: Login flow, session management, credential validation
+- **Data Persistence Tests**: Settings storage and retrieval
 
-#### Instrumented Tests
+##### Integration Tests
 ```bash
 ./gradlew connectedAndroidTest
 ```
+- **Service Integration Tests**: PositionMonitorService lifecycle and functionality
+- **UI Tests**: MainActivity interactions and user interface validation
+- **Real-world Scenarios**: End-to-end testing of monitoring workflows
+
+##### Manual Testing Checklist
+See `TESTING_CHECKLIST.md` for comprehensive manual testing scenarios including:
+- Core position monitoring functionality
+- UI/UX interactions and accessibility
+- Data persistence and settings management
+- Notification system and permissions
+- Error handling and edge cases
+- Performance benchmarks and device compatibility
+
+#### Test Coverage Areas
+- **Core Functionality**: Position extraction, Wi-Fi detection, session management
+- **Security**: Input validation, XSS prevention, secure data handling
+- **Performance**: Memory usage, execution time, concurrent operations
+- **UI/UX**: User interactions, accessibility, visual feedback
+- **Error Handling**: Network failures, authentication errors, edge cases
+- **Integration**: Service lifecycle, activity transitions, data flow
 
 #### Debug Features
 - **Force Error**: Available in debug builds for testing error scenarios
 - **Enhanced Logging**: Detailed logs for debugging and development
 - **Test Notifications**: Built-in notification testing
+- **Performance Monitoring**: Memory and execution time tracking
 
 ## Permissions
 
