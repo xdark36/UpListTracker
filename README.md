@@ -53,6 +53,15 @@ A Kotlin Android app that monitors a user's "up" position (queue or sales rank) 
 
 ## Recent Improvements (Latest Update)
 
+### Authentication & Session Handling
+- **Browser-like Login Flow**: Login logic now mimics browser AJAX login, posting to `/index.php/main/login` with all required fields and headers.
+- **Detailed Logging**: All login POST fields, response headers, and response body (truncated) are logged for easier debugging.
+- **Robust Error Handling**: Improved detection and handling of authentication/session issues, with clear log output and fallback logic.
+- **Automatic Session Refresh**: Automatically detects stale session data and refreshes the session to ensure fresh position data is always fetched.
+
+### Position Extraction
+- **Hybrid Extraction Logic**: Supports both legacy and new HTML formats, ensuring compatibility with a wide range of position page structures.
+
 ### UI/UX Enhancements
 - **Copy Position Button**: Added one-tap copy functionality to main screen
 - **Enhanced Layout**: Improved position display with dedicated copy button

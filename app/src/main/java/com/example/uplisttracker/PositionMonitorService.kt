@@ -245,9 +245,9 @@ class PositionMonitorService : Service() {
                 // TODO: Restore BuildConfig.DEBUG check for Android builds only
                 if (newPosition.isEmpty() || newPosition == "--") {
                     try {
-                        val debugFile = File("/sdcard/position_debug.html")
+                        val debugFile = File(getExternalFilesDir(null), "position_debug.html")
                         debugFile.writeText(html)
-                        Log.d("PositionMonitorService", "Dumped HTML to /sdcard/position_debug.html")
+                        Log.d("PositionMonitorService", "Dumped HTML to ${debugFile.absolutePath}")
                     } catch (e: Exception) {
                         Log.e("PositionMonitorService", "Failed to dump HTML: ${e.message}")
                     }

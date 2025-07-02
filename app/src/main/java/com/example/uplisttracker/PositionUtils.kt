@@ -33,67 +33,30 @@ object PositionUtils {
      */
     fun extractPosition(html: String): String {
         val doc = Jsoup.parse(html)
-        val bodyText = doc.body()?.text() ?: ""
-        
-        // Try multiple possible selectors for position
-        val possibleSelectors = listOf(
-            "#btnSalesUpStatus",
-            "#position-element",
-            ".position",
-            "#position",
-            "[data-position]",
-            "span:contains(Position)",
-            "div:contains(Position)",
-            "td:contains(Position)"
-        )
-        
-        val positionPatterns = listOf(
-            Regex("Position\\s*#\\s*(\\d+)", RegexOption.IGNORE_CASE),
-            Regex("Position:\\s*([^\\s]+)", RegexOption.IGNORE_CASE),
-            Regex("Current Position:\\s*([^\\s]+)", RegexOption.IGNORE_CASE),
-            Regex("Your Position:\\s*([^\\s]+)", RegexOption.IGNORE_CASE)
-        )
-        
-        for (selector in possibleSelectors) {
-            try {
-                val element = doc.selectFirst(selector)
-                if (element != null) {
-                    val text = element.text().trim()
-                    if (text.isEmpty()) {
-                        return ""
-                    }
-                    if (selector.contains(":contains(Position)")) {
-                        // Only return if text matches a position pattern
-                        for (pattern in positionPatterns) {
-                            val match = pattern.find(text)
-                            if (match != null) {
-                                val position = match.groupValues[1].trim()
-                                safeLog("PositionUtils", "Found position with pattern in selector '$selector': $position")
-                                return position
-                            }
-                        }
-                        continue
-                    } else if (text != "Position") {
-                        safeLog("PositionUtils", "Found position with selector '$selector': $text")
-                        return text
-                    }
-                }
-            } catch (e: Exception) {
-                safeLog("PositionUtils", "Selector '$selector' failed: ${e.message}")
-            }
+        // 1. Try #btnSalesUpStatus with 'Position # X' format
+        val statusDiv = doc.getElementById("btnSalesUpStatus")
+        val regex = Regex("""Position\s*#\s*(\d+)""", RegexOption.IGNORE_CASE)
+        val text = statusDiv?.text()?.trim() ?: ""
+        val match = regex.find(text)
+        if (match != null) {
+            val position = match.groupValues[1].trim()
+            safeLog("PositionUtils", "Extracted position from #btnSalesUpStatus: $position")
+            return position
         }
-        
-        // If no specific element found, look for position-like text in the entire document
-        safeLog("PositionUtils", "Full page text length: ${bodyText.length}")
-        safeLog("PositionUtils", "Page contains 'position': ${bodyText.contains("position", ignoreCase = true)}")
-        
-        for (pattern in positionPatterns) {
-            val match = pattern.find(bodyText)
-            if (match != null) {
-                val position = match.groupValues[1].trim()
-                safeLog("PositionUtils", "Found position with pattern: $position")
-                return position
-            }
+        // 2. Try #position-element (legacy/other formats)
+        val positionElement = doc.getElementById("position-element")
+        if (positionElement != null) {
+            val value = positionElement.text().trim()
+            safeLog("PositionUtils", "Extracted position from #position-element: '$value'")
+            return value
+        }
+        // 3. Fallback: search the whole document for 'Position # X'
+        val bodyText = doc.body()?.text() ?: ""
+        val matchFallback = regex.find(bodyText)
+        if (matchFallback != null) {
+            val position = matchFallback.groupValues[1].trim()
+            safeLog("PositionUtils", "Extracted position from body text: $position")
+            return position
         }
         safeLog("PositionUtils", "No position found in HTML")
         return "--"
@@ -140,85 +103,63 @@ object PositionUtils {
 
     fun loginAndCacheSession(context: Context, loginUrl: String, empNumber: String, userPassword: String): Boolean {
         val client = getOkHttpClient()
-        
-        // First, try to get the login page to see if there are any CSRF tokens or other required fields
-        val getRequest = Request.Builder()
-            .url(loginUrl)
-            .get()
-            .build()
-        
-        safeLog("PositionUtils", "Attempting login to: $loginUrl")
+        // Compose the correct login endpoint
+        val loginEndpoint = if (loginUrl.endsWith("/")) loginUrl + "index.php/main/login" else loginUrl + "/index.php/main/login"
+        safeLog("PositionUtils", "Attempting login to: $loginEndpoint")
         safeLog("PositionUtils", "Employee number: $empNumber")
-        
-        var sessionCookies = mutableListOf<String>()
-        client.newCall(getRequest).execute().use { getResponse ->
-            if (getResponse.isSuccessful) {
-                sessionCookies.addAll(getResponse.headers("Set-Cookie"))
-                safeLog("PositionUtils", "Got login page, session cookies: ${sessionCookies.size}")
+        // Build the POST body as the browser does
+        val loginRequestBody = FormBody.Builder()
+            .add("store", "")
+            .add("user_id", "")
+            .add("user", "")
+            .add("other_id", "")
+            .add("emp_number", empNumber)
+            .add("setpassword", userPassword)
+            .add("isTouchSupported", "false")
+            .build()
+        // Log POST fields
+        val postFields = mutableListOf<Pair<String, String>>()
+        for (i in 0 until loginRequestBody.size) {
+            postFields.add(loginRequestBody.name(i) to loginRequestBody.value(i))
+        }
+        safeLog("PositionUtils", "POST fields: ${postFields.joinToString { it.first + "=" + it.second }}")
+        val loginRequest = Request.Builder()
+            .url(loginEndpoint)
+            .post(loginRequestBody)
+            .header("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:102.0) Gecko/102.0 Firefox/102.0")
+            .header("Accept", "application/json, text/javascript, */*; q=0.01")
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Referer", loginUrl)
+            .build()
+        client.newCall(loginRequest).execute().use { response ->
+            val postCookies = response.headers("Set-Cookie")
+            val responseBody = response.body?.string() ?: ""
+            // Log all response headers
+            safeLog("PositionUtils", "Login response headers:")
+            for ((name, value) in response.headers) {
+                safeLog("PositionUtils", "$name: $value")
+            }
+            // Log response body (truncate if very large)
+            val truncatedBody = if (responseBody.length > 1000) responseBody.substring(0, 1000) + "... [truncated]" else responseBody
+            safeLog("PositionUtils", "Login response body: $truncatedBody")
+            safeLog("PositionUtils", "Login response code: ${response.code}")
+            safeLog("PositionUtils", "Cookies received: ${postCookies.size}")
+            safeLog("PositionUtils", "Response successful: ${response.isSuccessful}")
+            safeLog("PositionUtils", "Response body length: ${responseBody.length}")
+            // Parse JSON response for success
+            val isLoginSuccess = responseBody.contains("\"success\":true")
+            safeLog("PositionUtils", "Login success indicators: $isLoginSuccess")
+            if (isLoginSuccess && postCookies.isNotEmpty()) {
+                cacheSessionCookie(context, postCookies)
+                safeLog("PositionUtils", "Session cached successfully with POST cookies (browser-style login)")
+                return true
+            } else if (isLoginSuccess) {
+                safeLog("PositionUtils", "Login appears successful but no cookies - may use different auth method")
+                return true
+            } else {
+                safeLog("PositionUtils", "Login failed or unexpected response")
             }
         }
-        
-        // Try different form field names that might be used
-        val possibleFieldNames = listOf(
-            "emp_number" to "user_password",
-            "username" to "password", 
-            "user" to "pass",
-            "employee_number" to "password",
-            "emp" to "pwd"
-        )
-        
-        for ((userField, passField) in possibleFieldNames) {
-            safeLog("PositionUtils", "Trying login with fields: $userField, $passField")
-            
-            val loginRequestBody = FormBody.Builder()
-                .add(userField, empNumber)
-                .add(passField, userPassword)
-                .build()
-            
-            val loginRequest = Request.Builder()
-                .url(loginUrl)
-                .post(loginRequestBody)
-                .apply {
-                    if (sessionCookies.isNotEmpty()) {
-                        addHeader("Cookie", sessionCookies.joinToString("; "))
-                    }
-                }
-                .build()
-            
-            client.newCall(loginRequest).execute().use { response ->
-                val postCookies = response.headers("Set-Cookie")
-                val responseBody = response.body?.string() ?: ""
-                val success = postCookies.isNotEmpty() && response.isSuccessful
-                val isLoginSuccess = responseBody.contains("logout", ignoreCase = true) || 
-                                   responseBody.contains("welcome", ignoreCase = true) ||
-                                   responseBody.contains("dashboard", ignoreCase = true) ||
-                                   responseBody.contains("menu", ignoreCase = true) ||
-                                   !responseBody.contains("login", ignoreCase = true) ||
-                                   response.code == 302
-                
-                safeLog("PositionUtils", "Login response code: ${response.code}")
-                safeLog("PositionUtils", "Cookies received: ${postCookies.size}")
-                safeLog("PositionUtils", "Response successful: ${response.isSuccessful}")
-                safeLog("PositionUtils", "Response body length: ${responseBody.length}")
-                safeLog("PositionUtils", "Login success indicators: $isLoginSuccess")
-                
-                if (success || (response.isSuccessful && isLoginSuccess)) {
-                    if (postCookies.isNotEmpty()) {
-                        cacheSessionCookie(context, postCookies)
-                        safeLog("PositionUtils", "Session cached successfully with POST cookies: $userField, $passField")
-                    } else if (sessionCookies.isNotEmpty()) {
-                        cacheSessionCookie(context, sessionCookies)
-                        safeLog("PositionUtils", "Session cached successfully with GET cookies: $userField, $passField")
-                    } else {
-                        safeLog("PositionUtils", "Login appears successful but no cookies - may use different auth method")
-                    }
-                    return true
-                } else {
-                    safeLog("PositionUtils", "Failed with fields: $userField, $passField")
-                }
-            }
-        }
-        
         safeLog("PositionUtils", "All login attempts failed")
         return false
     }
@@ -262,9 +203,19 @@ object PositionUtils {
         return false
     }
 
+    private fun isStaleSessionData(html: String): Boolean {
+        // Check for common indicators of stale/expired session data
+        return html.contains("login") || 
+               html.contains("Login") || 
+               html.contains("session") || 
+               html.contains("expired") ||
+               html.contains("timeout") ||
+               html.length < 100  // Very short responses often indicate redirects to login
+    }
+
     fun fetchAndCompareUpPosition(context: Context, url: String): Boolean {
         var attempt = 0
-        val maxAttempts = 2
+        val maxAttempts = 3  // Increased attempts to allow for session refresh
         while (attempt < maxAttempts) {
             try {
                 val response = makeAuthenticatedRequest(context, url)
@@ -275,6 +226,27 @@ object PositionUtils {
                     // Store the new position
                     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                     val lastPosition = prefs.getString("last_position", "--")
+                    
+                    // Check for stale session data or empty position with cached session
+                    val shouldRefreshSession = (newPosition.isEmpty() || isStaleSessionData(html)) && 
+                                             getSessionCookie(context) != null && 
+                                             attempt < maxAttempts - 1
+                    
+                    if (shouldRefreshSession) {
+                        safeLog("PositionUtils", "Detected stale session data or empty position, refreshing session...")
+                        clearSessionCookie(context)
+                        val loginUrl = prefs.getString("login_url", "") ?: ""
+                        val empNumber = prefs.getString("emp_number", "") ?: ""
+                        val userPassword = prefs.getString("user_password", "") ?: ""
+                        
+                        if (loginUrl.isNotEmpty() && empNumber.isNotEmpty() && userPassword.isNotEmpty()) {
+                            if (loginAndCacheSession(context, loginUrl, empNumber, userPassword)) {
+                                safeLog("PositionUtils", "Session refreshed, retrying position fetch")
+                                attempt++
+                                continue
+                            }
+                        }
+                    }
                     
                     prefs.edit()
                         .putString("last_position", newPosition)
