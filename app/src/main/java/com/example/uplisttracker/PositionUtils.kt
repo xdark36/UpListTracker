@@ -205,12 +205,14 @@ object PositionUtils {
 
     private fun isStaleSessionData(html: String): Boolean {
         // Check for common indicators of stale/expired session data
-        return html.contains("login") || 
+        val isStale = html.contains("login") || 
                html.contains("Login") || 
                html.contains("session") || 
                html.contains("expired") ||
                html.contains("timeout") ||
                html.length < 100  // Very short responses often indicate redirects to login
+        safeLog("PositionUtils", "Stale session check - HTML length: ${html.length}, contains login: ${html.contains("login")}, isStale: $isStale")
+        return isStale
     }
 
     fun fetchAndCompareUpPosition(context: Context, url: String): Boolean {
@@ -218,18 +220,26 @@ object PositionUtils {
         val maxAttempts = 3  // Increased attempts to allow for session refresh
         while (attempt < maxAttempts) {
             try {
+                safeLog("PositionUtils", "Fetch attempt ${attempt + 1}/$maxAttempts")
                 val response = makeAuthenticatedRequest(context, url)
                 if (response?.isSuccessful == true) {
                     val html = response.body?.string() ?: ""
                     val newPosition = extractPosition(html)
+                    safeLog("PositionUtils", "Extracted position: '$newPosition', HTML length: ${html.length}")
                     
                     // Store the new position
                     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                     val lastPosition = prefs.getString("last_position", "--")
                     
                     // Check for stale session data or empty position with cached session
-                    val shouldRefreshSession = (newPosition.isEmpty() || isStaleSessionData(html)) && 
-                                             getSessionCookie(context) != null && 
+                    val hasCachedSession = getSessionCookie(context) != null
+                    val isStaleData = isStaleSessionData(html)
+                    val isEmptyPosition = newPosition.isEmpty() || newPosition == "--"
+                    
+                    safeLog("PositionUtils", "Session check - hasCachedSession: $hasCachedSession, isStaleData: $isStaleData, isEmptyPosition: $isEmptyPosition")
+                    
+                    val shouldRefreshSession = (isEmptyPosition || isStaleData) && 
+                                             hasCachedSession && 
                                              attempt < maxAttempts - 1
                     
                     if (shouldRefreshSession) {
@@ -240,11 +250,16 @@ object PositionUtils {
                         val userPassword = prefs.getString("user_password", "") ?: ""
                         
                         if (loginUrl.isNotEmpty() && empNumber.isNotEmpty() && userPassword.isNotEmpty()) {
+                            safeLog("PositionUtils", "Attempting session refresh with login...")
                             if (loginAndCacheSession(context, loginUrl, empNumber, userPassword)) {
-                                safeLog("PositionUtils", "Session refreshed, retrying position fetch")
+                                safeLog("PositionUtils", "Session refreshed successfully, retrying position fetch")
                                 attempt++
                                 continue
+                            } else {
+                                safeLog("PositionUtils", "Session refresh failed")
                             }
+                        } else {
+                            safeLog("PositionUtils", "Missing login credentials for session refresh")
                         }
                     }
                     
@@ -258,8 +273,10 @@ object PositionUtils {
                         safeLog("PositionUtils", "Position changed from $lastPosition to $newPosition")
                         return true
                     }
+                    safeLog("PositionUtils", "Position unchanged: $newPosition")
                     return true // success
                 } else {
+                    safeLog("PositionUtils", "HTTP request failed with code: ${response?.code}")
                     // If response is not successful, try to re-login
                     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                     val loginUrl = prefs.getString("login_url", "") ?: ""
@@ -267,10 +284,13 @@ object PositionUtils {
                     val userPassword = prefs.getString("user_password", "") ?: ""
                     
                     if (loginUrl.isNotEmpty() && empNumber.isNotEmpty() && userPassword.isNotEmpty()) {
+                        safeLog("PositionUtils", "Attempting re-login due to failed HTTP request...")
                         clearSessionCookie(context)
                         if (loginAndCacheSession(context, loginUrl, empNumber, userPassword)) {
                             safeLog("PositionUtils", "Re-login successful, retrying fetch")
                             continue
+                        } else {
+                            safeLog("PositionUtils", "Re-login failed")
                         }
                     }
                 }
