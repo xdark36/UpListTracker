@@ -227,17 +227,15 @@ class PositionMonitorService : Service() {
                 }
                 val html = response.body?.string() ?: ""
                 response.close()
-                val doc = Jsoup.parse(html)
-                val positionElement = doc.selectFirst(POSITION_SELECTOR)
-                val newPosition = positionElement?.text() ?: ""
+                val newPosition = PositionUtils.extractPosition(html)
                 Timber.i("Parsed position: '$newPosition'")
                 val lastPosition = prefs.getString("last_position", null)
-                if (newPosition.isNotEmpty() && newPosition != lastPosition) {
+                if (newPosition.isNotEmpty() && newPosition != "--" && newPosition != lastPosition) {
                     prefs.edit().putString("last_position", newPosition).apply()
                     showPositionChangeNotification("Position Update", "Position changed: $newPosition")
                     Timber.i("Position changed from '$lastPosition' to '$newPosition'")
                     PositionRepository.updatePosition(newPosition)
-                } else if (newPosition.isNotEmpty()) {
+                } else if (newPosition.isNotEmpty() && newPosition != "--") {
                     Timber.d("Position unchanged: '$newPosition'")
                 } else {
                     Timber.w("Position element found but value is empty")

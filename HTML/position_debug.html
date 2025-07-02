@@ -11,17 +11,17 @@
 	<meta name="keywords" content="" />
     <META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW">
             <!-- for all other browsers -->
-        <link rel="icon" type="image/png" href="https://selling1.vcfcorp.com/images/vcflogo.png"/>
+        <link rel="icon" type="image/png" href="https://selling.vcfcorp.com/images/vcflogo.png"/>
                 
 
 
-    <link rel="stylesheet"  href="https://selling1.vcfcorp.com/third_party/bootstrap/css/bootstrap.min.css?v=4.9.0.3" type="text/css" media="all" />
+    <link rel="stylesheet"  href="https://selling.vcfcorp.com/third_party/bootstrap/css/bootstrap.min.css?v=4.9.0.3" type="text/css" media="all" />
 
 </head>
 <body>
     <div id="turnScreenWindow" class="hide"><i class="fa fa-ban fa-4x"></i><br> Please rotate screen back to landscape view!</div>
     <noscript><p><b>Javascript must be enabled to use this form.</b></p></noscript>
-<button class="slideOutMenu button_red_bordered hide"><i class="fa fa-bars"></i></button>
+<button class="slideOutMenu button_red_bordered"><i class="fa fa-bars"></i></button>
 <nav id="rightMenu" class="hide">
     <header>
         <button class="rightMenuButton btn btn-danger pull-right" style="margin-top:15px"><i class="fa fa-bars"></i></button>
@@ -36,6 +36,7 @@
         <li><a href="#" id="showCompetitors"><i class="fa fa-compass fa-fw"></i> Comp Shop</a></li>
         <li><a href="#" id="emailTemplate"><i class="fa fa-envelope fa-fw"></i> Email Template</a></li>
         
+                    <li><a href="#" id="generateLead"><i class="fa fa-search fa-users"></i> OTB Customers</a></li>
                 <li><a href="#" id="addQuickSku"><i class="fa fa-shopping-cart"></i> Quick SKU</a></li>
                 <li><a href="#" id="purePromiseRebate"><i class="fa fa-credit-card fa-fw"></i> Pure Promise Rebates</a></li>
         <li><a href="#" id="menuWhatIfCalculator"><i class="fa fa-calculator fa-fw"></i> What If Calculator</a></li>
@@ -44,48 +45,348 @@
         <li><a href="#" id="menuLogouts"><i class="fa fa-power-off fa-fw"></i> Logout</a></li>
     </ul>
 </nav>
-<div id='redirectNotify' style="display:none;"> <!-- <img src='https://selling1.vcfcorp.com/images/ajax-loader.gif' alt='loading image'/>--> </div>
+<div id='redirectNotify' style="display:none;"> <!-- <img src='https://selling.vcfcorp.com/images/ajax-loader.gif' alt='loading image'/>--> </div>
 <div id="appBody">
-<div class="HFC_App_Sprite lockcorner i_lockicon" style="display:none;"></div>
-<div>
-    <div class="container">
-        <div class="row">
-            <div class="col-md-4 col-md-offset-4 col-sm-6 col-sm-offset-3">
-                <form onsubmit="return validate();" action="https://selling1.vcfcorp.com/"
-                      id="loginForm"
-                      name="logon"
-                      method="post"
-                      data-base="https://selling1.vcfcorp.com/"
-                >
-                    <input type="hidden" id="isTouchSupported" name="isTouchSupported" value="false"/>
-                    <div class="storebuttons">
-                        <img style="margin: 0 auto;" src="https://selling1.vcfcorp.com/images/Logo-DLF-VCF-ASF-400-white.jpg" class="img-responsive" alt="Designer Looks, Value City, and American Signature Furniture Stores">                        <br>
-                        <input type="text" name="emp_number" id="emp_number" placeholder="Enter Employee Number" value="" class="form-control input-lg" spellcheck="false" autocorrect="off" autocomplete="off"/>
+
+<!-- envurl is so that the app can determine which env the user should be sent to; called during login -->
+<div id="mainWindow" class="hidden-print" data-envurl="https://selling1.vcfcorp.com">
+    <div id="headOptions">
+        <div class="container-fluid">
+            <button class="hidden-lg hidden-md btn btn-danger pull-right rightMenuButton" style="position: absolute;top:15px;right:15px;"> <i class="fa fa-bars"></i> </button>
+              
+            <div class="row">
+                <div class="col-md-2">
+                    <img id="logos" style="margin-top: 15px;" src="https://selling.vcfcorp.com/images/Logo-DLF-VCF-ASF-400-white.jpg" class="img-responsive img-center" onclick="javascript:ShopdataUI.lookUpCustomer();" alt="Designer Looks, Value City, and American Signature Furniture Stores">                    <div style="font-size:.5em;">Store#:406 - NOAH DEEMS - 2</div>
+                </div>
+                <div class="hidden-lg hidden-md col-sm-2 col-xs-1">
+
+                </div>
+
+                <div class="col-xs-12 visible-xs visible-sm text-center">
+                    STORE#:406 - <span style="font-size:.75em;">HFC: NOAH DEEMS                    </span>                </div>
+                
+                <div class="col-md-5">
+                    <div class="row">
+                        <div class="col-xs-3 headerButton">
+                            <button id="cmdEngage" style="display: none; margin-top: 0px;" class="btn btn-default btn-block btn-sm text-center " data-buttoninput="button">
+                                <span class=" hidden-lg hidden-md"><i class="fa fa-user fa-fw fa-3x hidden-lg hidden-md"></i><br></span>
+                                Connect<br>Customer                            </button>
+                        </div>
+                        <div class="col-xs-3 headerButton">
+                            <button id="cmdExitCustomer" style="display: none; margin-top: 0px;" class="btn btn-default btn-sm btn-block text-center " data-buttoninput="none">
+                                <span class=" hidden-lg hidden-md"><i class="fa fa-times-circle fa-fw fa-3x hidden-lg hidden-md"></i><br></span>
+                                Release<br>Customer                            </button>
+                            <button id="btnShowLeaveFloor" style="display: none; margin-top: 0px;" class="btn btn-default btn-sm btn-block text-center " data-buttoninput="button">
+                                <span class=" hidden-lg hidden-md"><i class="fa fa-chain-broken fa-fw fa-3x hidden-lg hidden-md"></i><br></span>
+                                Step<br>Away                            </button>
+                            <button id="btnFloorReturn" style="display: none; margin-top: 0px;" class="btn btn-default btn-sm btn-block text-center " data-buttoninput="none">
+                                <span class=" hidden-lg hidden-md"><i class="fa fa-chain-broken fa-fw fa-3x hidden-lg hidden-md"></i><br></span>
+                                I Am<br>Back                            </button>
+                        </div>
+                        <div class="col-xs-3 headerButton">
+                            <button id="lookupCustomer" style="display: none; margin-top: 0px;" class="btn btn-default btn-block btn-sm text-center" data-buttoninput="">
+                                <span class=" hidden-lg hidden-md"><i class="fa fa-search-plus fa-fw fa-3x"></i><br></span>
+                                Lookup<br>Customer                            </button>
+                            <button id="cmdExitFloor" style="display: none; margin-top: 0px;" class="btn btn-default btn-block btn-sm text-center" data-buttoninput="button">
+                                <span class=" hidden-lg hidden-md"><i class="fa fa-sign-out fa-fw fa-3x"></i><br></span>
+                                Exit<br>Floor                            </button>
+                        </div>
+                        <div class="col-xs-3 headerButton">
+                            <!-- cmdLogin -->
+                            <button id="customerEmail" class="btn btn-default btn-block btn-sm text-center">
+                                <span class=" hidden-lg hidden-md"><i class="fa fa-at fa-fw fa-3x"></i><br></span>
+                                Customer<br>Email
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-7 col-xs-7">
+                            <label>Pickup Store:</label>
+                            <select id="TXTPUSTORE" class="form-control input-sm" >
+
+                            </select>
+                        </div>
+                        <div class="col-md-5 col-sm-5 col-xs-5">
+                            <label>Delivery Zip:</label>
+                                                        <input type="number" id="TXTDELZIP" value="" disabled class="numberinput form-control input-sm" maxlength="5" placeholder='Pickup'>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 headerButton hidden-sm hidden-xs">
+                    <button class="btn btn-danger btn-sm btn-block customerinfoTab" onclick="ShopdataUI.openCustomerInfoPage(true);">Customer<br>Information</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="mobileSearchButtons" class="container hidden-lg hidden-md text-center">
+            <div class="row">
+                <div class="col-xs-6">
+                    <button class="btn btn-danger btn-block btn-lg customerinfoTab" onclick="ShopdataUI.openCustomerInfoPage(true);"><i class="fa fa-user"></i> Customer Information</button>
+                </div>
+                <div class="col-xs-6">
+                    <button id="mobileSettingsView" class="btn btn-warning btn-block btn-lg"><i class="fa fa-search-plus fa-fw"></i> View Search Options </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grayBackground headingRow mobileSlideDown">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-md-3">
+                        <form id="mainSearchBox" class="searchInputForm">
+                            <div class="input-group">
+                                <input type='text' id='txtWord' placeholder="Search Words or Sku" class="form-control" spellcheck="false"/>
+                                <span class="input-group-btn">
+                                    <button class="btn btn-danger cmdSearchSKU" type="submit"><i class="fa fa-search"></i></button>
+                                </span>
+
+                                <br>
+                                <datalist id="popularSearchTerms">
+                                    <select style="display: none;" class="form-control">
+                                        <option value="CLEARANCE">CLEARANCE</option><option value="ACCESSORY">ACCESSORY</option><option value="SALE ITEMS">SALE ITEMS</option><option value="ARIELLE">ARIELLE</option><option value="ARTEMIS">ARTEMIS</option><option value="BOWERY">BOWERY</option><option value="BURKE">BURKE</option><option value="CHARTHOUSE">CHARTHOUSE</option><option value="HAZEL">HAZEL</option><option value="MAXWELL">MAXWELL</option><option value="WINSTON">WINSTON</option>                                    </select>
+                                </datalist>
+                            </div>
+                        </form>
                     </div>
 
-                    <div id="fr_user_id">
-                        <input type="text" name="user_id" class="form-control input-lg" id="user_id" placeholder="Enter User ID" style="display:none" spellcheck="false" autocorrect="off" autocomplete="off"/>
-                    </div>
-                    <input type="password" name="user_password" class="form-control input-lg" id="user_password" placeholder="Enter Password"/>
-                    <div class="text-center">
-                        <button type="button" class="btn btn-danger btn-lg" onclick="loginUI.validate();">Login</button>
-                    </div>
+                    <div class="col-md-9">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <button id="prevSearch" class="btn btn-default btn-block greyButton">
+                                    Search Results
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button id="prevSkus" class="btn btn-default btn-block greyButton hide">
+                                    Viewed Items
+                                </button>
+                            </div>
+                            <div class="col-md-2">
+                                <button id="personalizedLiving" class="btn btn-default btn-block greyButton">
+                                    Customization
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button id="pastPurchases" class="btn btn-default btn-block greyButton  hide">
+                                    Purchase History
+                                </button>
+                            </div>
 
-                    <div id="numericKeypadl"></div>
-                </form>
-                <div id="msgDialog" title="Information" style="display:none">
-                    <p>No Errors</p>
+                            <div class="col-md-1 hidden-sm hidden-xs">
+                                <div id="menuButtonArea" style="position: relative;">
+                                    <span class="badge badge-black unreadBadge headerUnreadBadge">299</span>                                    <button class="btn btn-danger rightMenuButton"> <i class="fa fa-bars"></i> </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <div id="modalArea"></div>
+
+    <div id="mainSection" class="container-fluid">
+        <div id="showHFCNotes"></div>
+<!-- MOBILE MENU BUTTONS -->
+<div id="mobileShowCustomerButton" class="hidden-lg hidden-md">
+    <div class="row text-center">
+        <div class="col-xs-4">
+            <button id="customerInfoSectionButton" data-section="customerInfoSection" class="btn btn-danger btn-block">
+                <i class="fa fa-users fa-fw fa-3x"></i><br>
+                Customers<br>List
+            </button>
+        </div>
+        <div class="col-xs-4">
+            <button data-section="productInfoSection" class="btn btn-danger btn-block">
+                <i class="fa fa-info-circle fa-fw fa-3x"></i><br>
+                Product<br>Info
+            </button>
+        </div>
+        <div class="col-xs-4">
+            <button data-section="shoppingCartSection" class="btn btn-danger btn-block">
+                <i class="fa fa-shopping-cart fa-fw fa-3x"></i><br>
+                Shopping<br>Cart
+            </button>
+        </div>
+    </div>
 </div>
 
-<div id='loadNotify' style="display:none;">
-    <!-- <img src='https://selling1.vcfcorp.com/images/ajax-loader.gif' alt='loading image'/>--> </div>
+<div id="allSections" class="row">
+    <div id="customerInfoSection" class="col-lg-3 col-md-3">
+        <div id="divcartinbox">
+    
+    
+    <div class="row">
+        <div class="col-md-12 col-sm-6 col-xs-12">
+        <div id="btnSalesUpStatus" style="background-color: #a3d977; color: #000000;" block> Position # 1</div>
+    </div>
+        <div class="col-md-12 col-sm-6 col-xs-12">
+                <div id="currentCustomerBox"  class="darkBlackCustomerTitle" data-customer="">
+            <div class="" style="padding:8px;"><h4 style="margin: 5px;font-size: 1em;">No Active Customer Selected</h4></div>        </div>
+    </div>
+    <div class="col-md-12 col-sm-6 col-xs-12">
+        <ul id="customerListSection" class="list-group">
+                       <li id="returningCustomerList" class="list-group-item yellowCustomerTitle" data-title="Returning Customers">
+               <i class="fa fa-recycle fa-fw"></i> Returning Customers
+           </li>
+                            <li id="leadCustomerList" class="list-group-item " data-title="OTB Customers">
+                    <i class="fa fa-users fa-fw"></i> OTB Customers
+                </li>
+                       <li id="todayCustomerList" class="list-group-item " data-title="Today's Customers">
+               <i class="fa fa-calendar-check-o fa-fw"></i> Today
+           </li>
+            <li id="customerWishList" class="list-group-item " data-title="Wish List">
+                <i class="fa fa-shopping-basket" aria-hidden="true"></i> Wish List
+            </li>
+           <li id="priceQuoteCustomerList" class="list-group-item " data-title="Price Quotes">
+               <i class="fa fa-credit-card fa-fw"></i> Price Quote
+               <span class="badge badge-red">12</span>           </li>
+           <li id="priceQuoteAvailableCustomerList" class="list-group-item " data-title="PQ IN STOCK">
+               <i class="fa fa-money fa-fw" style="color: green;"></i> PQ IN STOCK
+               <span class="badge">18</span>           </li>
+           <li id="canceledCustomerList" class="list-group-item " data-title="Canceled Customers">
+               <i class="fa fa-ban fa-fw"></i> Canceled
+               <span class="badge badge-red">2</span>           </li>
+           <li id="priceLockCustomerList" class="list-group-item " data-title="Price Hold">
+               <i class="fa fa-lock fa-fw"></i> Price Hold
+               <span class="badge badge-yellow">2</span>           </li>
+           <li id="needsScheduledCustomerList" class="list-group-item " data-title="Needs Scheduled">
+               <i class="fa fa-calendar-times-o fa-fw "></i>
+               Needs Scheduled
+                          </li>
+           <li id="scheduledCustomerList" class="list-group-item " data-title="Scheduled Customers">
+               <i class="fa fa-calendar-check-o fa-fw"></i> Scheduled
+               <span class="badge badge-green">13</span>           </li>
+           <li id="shippedCustomerList" class="list-group-item " data-title="Shipped Customers">
+               <i class="fa fa-truck fa-fw"></i> Shipped
+               <span class="badge badge-yellow">3</span><span class="badge badge-blue">21</span>           </li>
+
+        </ul>
+    </div>
+</div>
 
 
+
+</div>
+
+    </div>
+    <div id="productInfoSection" class="col-lg-6 col-md-6">
+        
+<div id="divavailability">
+    <div id="mainHolder">
+        <div id="main" class="hfc">
+            <div id="skuDataWindowFrame">
+                <div id="skuDataWindow">
+<h3 id="customerNameBanner" class="sectionHeading"> </h3>                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+    <div id="shoppingCartSection" class="col-md-3">
+        
+<h3 class='sectionHeading'><i class='fa fa-shopping-cart'></i> Shopping Cart</h3>    </div>
+</div>
+
+<Script>
+    var hfcstatus = {"ROTATION":"Position #","ACTION_TIME":"05:52 PM","FLOOR_POSITION":"1","HFC_NAME":"Noah Deems","NAME_SEQUENCE":"2","STATUS_NAME":"Available","STATUS_BACKGROUND_COLOR":"green","STATUS_TEXT_COLOR":"black","ENGAGEMENTS":"","EMPLOYEE_ID":"90045","IP_ADDRESS":"010.000.000.000","LAST_CHANGE":"2025-07-02-17.52.10.663446","ENGAGE":"block","DISENGAGE":"none","HFCLIST":"block","LEAVE_FLOOR":"block","FLOOR_RETURN":"none","LOGIN":"none","EXIT":"block","LOOKUP":"none","STATUS":"floor","CONFIG":[{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4_font-weight","CFG_OUTPUT":"normal"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4-header","CFG_OUTPUT":"'Time'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4-header_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4-header_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4-header_text-align","CFG_OUTPUT":"center !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4-header_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"action_time","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4-header_font-weight","CFG_OUTPUT":"bold"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"rotation","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4_text-align","CFG_OUTPUT":"center !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4","CFG_OUTPUT":"action_time"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"table_width","CFG_OUTPUT":"650px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"disengage","CFG_VARIABLE_VALUE":"How was it?","CFG_OUTPUT":"exit01;required"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"leave_floor","CFG_VARIABLE_VALUE":"Take a Break","CFG_OUTPUT":"-break"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"engage","CFG_VARIABLE_VALUE":"New Customer","CFG_OUTPUT":"-new"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"button_input-submit","CFG_VARIABLE_VALUE":"engage","CFG_OUTPUT":"Close"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"engage","CFG_OUTPUT":"Connect<br>Customer"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"format","CFG_VARIABLE_VALUE":"hfc_name","CFG_OUTPUT":"hfc_name name_sequence"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"button_input","CFG_VARIABLE_VALUE":"engage","CFG_OUTPUT":"button"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"red","CFG_OUTPUT":"'#c92d39'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"leave_floor","CFG_VARIABLE_VALUE":"Go to Lunch","CFG_OUTPUT":"-lunch"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"existing","CFG_OUTPUT":""},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"employee_id","CFG_OUTPUT":"- (value)"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"header","CFG_OUTPUT":"'Customer Connect'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"button_input-header","CFG_VARIABLE_VALUE":"engage","CFG_OUTPUT":"Type of Customer"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"engagements","CFG_OUTPUT":"badge"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"button_input","CFG_VARIABLE_VALUE":"disengage","CFG_OUTPUT":"none"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"engage","CFG_VARIABLE_VALUE":"Returning Customer","CFG_OUTPUT":"-beback"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"button_input-submit","CFG_VARIABLE_VALUE":"disengage","CFG_OUTPUT":"Release"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"button_input-header","CFG_VARIABLE_VALUE":"disengage","CFG_OUTPUT":"Release Customer Questionaire"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"yellow","CFG_OUTPUT":"'#fcc438'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"top_position","CFG_OUTPUT":"2in"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"format","CFG_VARIABLE_VALUE":"status_name","CFG_OUTPUT":"engagements rotation floor_position"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"leave_floor","CFG_VARIABLE_VALUE":"Answer Phone","CFG_OUTPUT":"-phone"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"disengage","CFG_VARIABLE_VALUE":"Did they buy?","CFG_OUTPUT":"exit02;required"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"disengage","CFG_OUTPUT":"Release<br>Customer"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"button_input-submit","CFG_VARIABLE_VALUE":"leave_floor","CFG_OUTPUT":"Close"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"button_input","CFG_VARIABLE_VALUE":"leave_floor","CFG_OUTPUT":"button"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"status_position","CFG_OUTPUT":"Position"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"button_input-header","CFG_VARIABLE_VALUE":"leave_floor","CFG_OUTPUT":"Reason for Stepping Away"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"green","CFG_OUTPUT":"'#a3d977'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"maximum_rows","CFG_OUTPUT":"16"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"disengage","CFG_VARIABLE_VALUE":"Did they Finance?","CFG_OUTPUT":"exit03;optional"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"leave_floor","CFG_OUTPUT":"Step<br>Away"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"floor_position","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"4","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"floor_return","CFG_OUTPUT":"I Am<br>Back"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"4","CFG_VARIABLE_NAME":"button_input","CFG_VARIABLE_VALUE":"floor_return","CFG_OUTPUT":"none"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"4","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"gray","CFG_OUTPUT":"'#808080'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"4","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"columns","CFG_OUTPUT":"4"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"4","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"hfc_name","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1","CFG_OUTPUT":"floor_position"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1-header","CFG_OUTPUT":"'Position'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"exit","CFG_OUTPUT":"Exit<br>Floor"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"button_input-header","CFG_VARIABLE_VALUE":"exit","CFG_OUTPUT":"Are You Sure?"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"exit","CFG_VARIABLE_VALUE":"Yes. Remove me from the list","CFG_OUTPUT":""},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"black","CFG_OUTPUT":"'#000000'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2-header","CFG_OUTPUT":"'HFC'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3-header","CFG_OUTPUT":"'Status'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"name_sequence","CFG_OUTPUT":"- value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"button_input-submit","CFG_VARIABLE_VALUE":"exit","CFG_OUTPUT":"No"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"button_input","CFG_VARIABLE_VALUE":"exit","CFG_OUTPUT":"button"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"6","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2-header_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"6","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3-header_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"6","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"status_name","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"6","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1-header_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"6","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"white","CFG_OUTPUT":"'#FFFFFF'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"6","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3_font-weight","CFG_OUTPUT":"normal"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3-header_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1-header_font-weight","CFG_OUTPUT":"bold"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2_font-weight","CFG_OUTPUT":"normal"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"brown","CFG_OUTPUT":"'#A52A2A'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"status_text_color","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2-header_font-weight","CFG_OUTPUT":"bold"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1-header_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3-header_font-weight","CFG_OUTPUT":"bold"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1_font-weight","CFG_OUTPUT":"normal"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2-header_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2-header_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"status_background_color","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"blue","CFG_OUTPUT":"'#0000FF'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3-header_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1-header_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"lookup","CFG_OUTPUT":"Lookup<br>Customer"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"9","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2-header_text-align","CFG_OUTPUT":"center !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"9","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1_text-align","CFG_OUTPUT":"center !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"9","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3-header_text-align","CFG_OUTPUT":"center !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"9","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1-header_text-align","CFG_OUTPUT":"center !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"10","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2","CFG_OUTPUT":"hfc_name name_sequence"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"11","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"12","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"13","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"14","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2_text-align","CFG_OUTPUT":"left !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"15","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3","CFG_OUTPUT":"status_name engagements"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"16","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"17","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"18","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"19","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3_text-align","CFG_OUTPUT":"left !important"}]};
+
+    if(document.readyState === "complete") {
+        // Fully loaded!
+    } else if(document.readyState === "interactive") {
+        // DOM ready! Images, frames, and other subresources are still downloading.
+    } else {
+        // Loading still in progress.
+        // To wait for it to complete, add "DOMContentLoaded" or "load" listeners.
+
+        window.addEventListener("DOMContentLoaded", () => {
+            // DOM ready! Images, frames, and other subresources are still downloading.
+        });
+
+        window.addEventListener("load", () => {
+            // Fully loaded!
+            updateAppHeader(hfcstatus);
+        });
+    }
+
+    function updateAppHeader(hfcstatus)
+    {
+        var engage = document.getElementById("cmdEngage");
+        var disengage = document.getElementById("cmdExitCustomer");
+        var leave_floor = document.getElementById("btnShowLeaveFloor");
+        var floor_return = document.getElementById("btnFloorReturn");
+        var lookup = document.getElementById("lookupCustomer");
+        var exit = document.getElementById("cmdExitFloor");
+
+        engage.style.display = hfcstatus.ENGAGE;
+        disengage.style.display = hfcstatus.DISENGAGE;
+        leave_floor.style.display = hfcstatus.LEAVE_FLOOR;
+        floor_return.style.display = hfcstatus.FLOOR_RETURN;
+        lookup.style.display = hfcstatus.LOOKUP;
+        exit.style.display = hfcstatus.EXIT;
+    }
+</Script>    </div>
+</div>
+
+
+<div id="searchResultsArea" class="hide hidden-print">
+    <div id="searchResults" class="container-fluid">
+        <div id="searchHeader" class="row">
+            <div class='col-md-1 col-sm-3 hidden-xs'>
+                <p class="text-right" style="padding:0;font-size: .68em;margin-top: 10px;">
+                    Results(<span class="liveResultCount" rel="100">100</span>)
+                </p>
+            </div>
+
+            <div class='col-md-4 col-sm-5 col-xs-9'>
+                <div class="hidden-lg hidden-md" style="height:10px"></div>
+                <div class="input-group">
+                    <form id="searchWindowForm" class="searchInputForm">
+                        <input type="text" id="txtWord2" data-count="100" class="form-control" maxlength="20" placeholder="Search Words or Sku">
+                        <span class="input-group-btn">
+                        <button class="btn btn-default cmdSearchSKU" type="submit"><i class="fa fa-search"></i></button>
+                    </form>
+                </span>
+                </div>
+            </div>
+
+            <div class='col-md-5'></div>
+
+            <div class="col-md-2 col-sm-2 col-xs-3">
+                <div class="hidden-lg hidden-md" style="height:10px"></div>
+                <button id="closeSearchWindow" class="btn btn-default pull-right">Close</button>
+                <div class="clearfix"></div>
+            </div>
+        </div>
+
+        <div style="height: 30px"></div>
+        <div class="row">
+            <div class="col-md-2">
+                <div id="searchOptions"></div>
+            </div>
+            <div class="col-md-10">
+                <div id="searchBody"></div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+<div id="productInfoArea" class="hide hidden-print"></div>
+<div id="customerInfoArea" class="hide hidden-print"></div>
+<div id="customerChecklistArea" class="hide"></div>
+<div id="managerChecklistArea" class="hide"></div>
+<div id="managerOtbArea" class="hide"></div>
+<div id="managerRebatesArea" class="hide"></div>
+<div id="managerConnectArea" class="hide"></div>
+<div id="printScreenCartArea" class="hide"></div>
+<div id="salesUpArea" class="hide"></div>
+<div id="personalizedLivingArea" class="hide"></div>
+<div id="financingTab" style="display:none;"></div>
+<div id='loadNotify' class="showing"></div>
+<button id="blurtarget" style="width:0px;position:absolute;left:-1000px;" onclick="return false;"></button>
         </div>
         <div id="footer" class="hidden-print">
             <span class="nowrap">
@@ -94,51 +395,64 @@
 
         <div id="modalArea"></div><!-- Bootstrap Modal Injection Goes In Here -->
 
-        <link rel="stylesheet"  href="https://selling1.vcfcorp.com/third_party/css/jquery-ui.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/third_party/bootstrap/css/bootstrap-theme.min.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/third_party/font-awesome/css/font-awesome.min.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/third_party/jquery/minimal/jquery-ui.min.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/third_party/css/jquery-ui.theme.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/third_party/css/jquery.clearable.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/third_party/slick/slick.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/third_party/slick/slick-theme.min.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/third_party/bootstrap-multiselect/css/bootstrap-multiselect.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/third_party/eerospinner/jquery.eerospinner_lg.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/application/css/style.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/third_party/datatables/jquery.dataTables.min.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/application/css/checklist.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/application/css/otb.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/application/css/salesup.css?v=4.9.0.3" type="text/css" media="all" />
-<link rel="stylesheet"  href="https://selling1.vcfcorp.com/application/css/purepromise.css?v=4.9.0.3" type="text/css" media="all" />
+        <link rel="stylesheet"  href="https://selling.vcfcorp.com/third_party/css/jquery-ui.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/third_party/bootstrap/css/bootstrap-theme.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/third_party/font-awesome/css/font-awesome.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/third_party/jquery/minimal/jquery-ui.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/third_party/css/jquery-ui.theme.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/third_party/css/jquery.clearable.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/third_party/slick/slick.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/third_party/slick/slick-theme.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/third_party/bootstrap-multiselect/css/bootstrap-multiselect.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/third_party/eerospinner/jquery.eerospinner_lg.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/application/css/style.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/third_party/datatables/jquery.dataTables.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/application/css/checklist.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/application/css/otb.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/application/css/salesup.min.css?v=4.9.0.3" type="text/css" media="all" />
+<link rel="stylesheet"  href="https://selling.vcfcorp.com/application/css/purepromise.min.css?v=4.9.0.3" type="text/css" media="all" />
 
 
-        <script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/jquery/jquery.min.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/bootstrap-multiselect/js/bootstrap-multiselect.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/jquery/minimal/jquery-ui.min.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/jquery.cookie.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/bootstrap/js/bootstrap.min.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/eerospinner/jquery.eerospinner.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/jquery.forcenumeric.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/freshaddress.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/fastclick.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/jquery.clearable.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/jquery.mask.min.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/trix/trix.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/application/js/htmlinputeditor.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/slick/slick.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/application/js/shopCartUI.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/application/js/ShopdataUI.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/application/js/loginUI.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/application/js/View.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/application/js/Search.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/application/js/Canvas.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/scribble/jquery.jqscribble.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/datatables/jquery.dataTables.min.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/third_party/tablednd/jquery.tablednd.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/application/js/checklist.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/application/js/otb.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/application/js/PurePromise.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/application/js/SalesUp.js?v=4.9.0.3"></script>
-<script type="text/javascript" src="https://selling1.vcfcorp.com/pnclient.js?v=4.9.0.3"></script>
-<script type="text/javascript">$(document).ready(function(){loginUI.Initialize("https://selling1.vcfcorp.com/",false,"");});</script>    </body>
+        <script type="text/javascript" src="https://selling.vcfcorp.com/third_party/jquery/jquery.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/bootstrap-multiselect/js/bootstrap-multiselect.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/jquery/minimal/jquery-ui.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/jquery.cookie.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/bootstrap/js/bootstrap.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/eerospinner/jquery.eerospinner.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/jquery.forcenumeric.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/freshaddress.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/fastclick.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/jquery.clearable.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/jquery.mask.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/trix/trix.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/application/js/htmlinputeditor.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/slick/slick.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/application/js/shopCartUI.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/application/js/ShopdataUI.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/application/js/loginUI.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/application/js/View.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/application/js/Search.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/application/js/Canvas.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/scribble/jquery.jqscribble.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/datatables/jquery.dataTables.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/third_party/tablednd/jquery.tablednd.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/application/js/checklist.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/application/js/otb.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/application/js/PurePromise.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/application/js/SalesUp.min.js?v=4.9.0.3"></script>
+<script type="text/javascript" src="https://selling.vcfcorp.com/pnclient.min.js?v=4.9.0.3"></script>
+
+<script type="text/javascript">$(document).ready(function(){shopCartUI.initialize("https://selling.vcfcorp.com/","Production - 4.9.0.3","click");
+ShopdataUI.loader("https://selling.vcfcorp.com/",
+[],
+{"SDCOMPSHOP":["American Freight","American Signature Furniture","Ashley Furniture","ARHAUS","Big Lots","Bob&#039;s Discount Furniture","Drexel","Ethan Allen","Havertys","Henredon","IKEA","Kane&#039;s","La-Z-Boy","Macy&#039;s Furniture","Mattress Firm","Pottery Barn","Raymour","Restoration Hardware","Sears","Sleep Outfitters","Thomasville","Value City Furniture","Wayfair.com"],"SDCOMPNEXT":["American Freight","American Signature Furniture","Ashley Furniture","ARHAUS","Big Lots","Bob&#039;s Discount Furniture","Drexel","Ethan Allen","Havertys","Henredon","IKEA","Kane&#039;s","La-Z-Boy","Macy&#039;s Furniture","Mattress Firm","Pottery Barn","Raymour","Restoration Hardware","Sears","Sleep Outfitters","Thomasville","Value City Furniture","Wayfair.com"],"SDCUSTTYPE":{"01":"Bargain Hunter","02":"Hold My Hand","03":"Give Me Space","04":"Creative Enthusiast","05":"Classic"},"SDADULTDTA":{"01":"Mom","02":"Dad","03":"Wife","04":"Husband","05":"Female Adult","06":"Male Adult"},"SDCHILDDTA":{"01":"Big Sister","02":"Big Brother","03":"Female Teen","04":"Male Teen","05":"Little Sister","06":"Little Brother","07":"Preteen Girl","08":"Preteen Boy","09":"Young Girl","10":"Young Boy","11":"Baby Girl","12":"Baby Boy","13":"Baby"},"SDMKTGDTA":{"01":"TV Commercial","02":"Website","03":"Email Promotion","04":"Radio Commercial","05":"Newspaper Ad","06":"Circular","07":"Mailer","08":"Facebook","09":"Twitter","10":"Pinterist","11":"Instagram","12":"Competitor","99":"Other"},"SDDEPTLIKE":{"01":"Living Room","02":"Bedroom","03":"Dining Room","04":"Bedding","05":"Kids Room","06":"Accents","07":"Outdoor Living","08":"Office","20":"Clearance","99":"Just Shopping"},"SDDEPTSHOP":{"01":"Living Room","02":"Bedroom","03":"Dining Room","04":"Bedding","05":"Kids Room","06":"Accents","07":"Outdoor Living","08":"Office","20":"Clearance","99":"Just Shopping"},"SDEXITTYPE":{"01":"Purchased","02":"Price Quote","03":"No Interest"},"CUSTMINCN":{"DFT":"030","015":"15 Minutes","030":"30 Minutes","045":"45 Minutes","060":"1 Hour","075":"1-1\/4 Hours","090":"1-1\/2 Hours","105":"1-3\/4 Hours","120":"2 Hours"},"CUSTELEV":{"DFT":"N","H":"Heavy Passenger Elevator","L":"Light Passenger Elevator","N":"None","S":"Service Elevator","W":"Walkup Stairs"},"CUSTGATE":{"B":"Buzz To Enter Gate","D":"Sign in with Doorman","DFT":"N","G":"Sign in with Guard","N":"None","O":"Sign in at Office","S":"Security Scan"},"CUSTPCNT":{"DFT":"T","E":"Email","P":"Phone","T":"Text"},"CUSTFLOOR":{"DFT":"1","1":"1st Floor","2":"2nd Floor","3":"3rd Floor","4":"4th or Above"},"MDROBO":[],"PUSTORES":[{"STRNBR":406,"SNAME":"Tampa-Dale Mabry","PHONE":8137690700},{"STRNBR":405,"SNAME":"Brandon","PHONE":8133151120}]},
+406,
+90045,
+62,
+"813","click","false",""
+);
+SalesUp.init({"ROTATION":"Position #","ACTION_TIME":"05:52 PM","FLOOR_POSITION":"1","HFC_NAME":"Noah Deems","NAME_SEQUENCE":"2","STATUS_NAME":"Available","STATUS_BACKGROUND_COLOR":"green","STATUS_TEXT_COLOR":"black","ENGAGEMENTS":"","EMPLOYEE_ID":"90045","IP_ADDRESS":"010.000.000.000","LAST_CHANGE":"2025-07-02-17.52.10.663446","ENGAGE":"block","DISENGAGE":"none","HFCLIST":"block","LEAVE_FLOOR":"block","FLOOR_RETURN":"none","LOGIN":"none","EXIT":"block","LOOKUP":"none","STATUS":"floor","CONFIG":[{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4_font-weight","CFG_OUTPUT":"normal"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4-header","CFG_OUTPUT":"'Time'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4-header_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4-header_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4-header_text-align","CFG_OUTPUT":"center !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4-header_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"action_time","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4-header_font-weight","CFG_OUTPUT":"bold"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"rotation","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4_text-align","CFG_OUTPUT":"center !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column4","CFG_OUTPUT":"action_time"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"0","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"table_width","CFG_OUTPUT":"650px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"disengage","CFG_VARIABLE_VALUE":"How was it?","CFG_OUTPUT":"exit01;required"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"leave_floor","CFG_VARIABLE_VALUE":"Take a Break","CFG_OUTPUT":"-break"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"engage","CFG_VARIABLE_VALUE":"New Customer","CFG_OUTPUT":"-new"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"button_input-submit","CFG_VARIABLE_VALUE":"engage","CFG_OUTPUT":"Close"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"engage","CFG_OUTPUT":"Connect\u003Cbr\u003ECustomer"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"format","CFG_VARIABLE_VALUE":"hfc_name","CFG_OUTPUT":"hfc_name name_sequence"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"button_input","CFG_VARIABLE_VALUE":"engage","CFG_OUTPUT":"button"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"red","CFG_OUTPUT":"'#c92d39'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"leave_floor","CFG_VARIABLE_VALUE":"Go to Lunch","CFG_OUTPUT":"-lunch"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"existing","CFG_OUTPUT":""},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"employee_id","CFG_OUTPUT":"- (value)"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"header","CFG_OUTPUT":"'Customer Connect'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"1","CFG_VARIABLE_NAME":"button_input-header","CFG_VARIABLE_VALUE":"engage","CFG_OUTPUT":"Type of Customer"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"engagements","CFG_OUTPUT":"badge"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"button_input","CFG_VARIABLE_VALUE":"disengage","CFG_OUTPUT":"none"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"engage","CFG_VARIABLE_VALUE":"Returning Customer","CFG_OUTPUT":"-beback"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"button_input-submit","CFG_VARIABLE_VALUE":"disengage","CFG_OUTPUT":"Release"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"button_input-header","CFG_VARIABLE_VALUE":"disengage","CFG_OUTPUT":"Release Customer Questionaire"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"yellow","CFG_OUTPUT":"'#fcc438'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"top_position","CFG_OUTPUT":"2in"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"format","CFG_VARIABLE_VALUE":"status_name","CFG_OUTPUT":"engagements rotation floor_position"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"leave_floor","CFG_VARIABLE_VALUE":"Answer Phone","CFG_OUTPUT":"-phone"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"disengage","CFG_VARIABLE_VALUE":"Did they buy?","CFG_OUTPUT":"exit02;required"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"2","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"disengage","CFG_OUTPUT":"Release\u003Cbr\u003ECustomer"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"button_input-submit","CFG_VARIABLE_VALUE":"leave_floor","CFG_OUTPUT":"Close"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"button_input","CFG_VARIABLE_VALUE":"leave_floor","CFG_OUTPUT":"button"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"status_position","CFG_OUTPUT":"Position"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"button_input-header","CFG_VARIABLE_VALUE":"leave_floor","CFG_OUTPUT":"Reason for Stepping Away"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"green","CFG_OUTPUT":"'#a3d977'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"maximum_rows","CFG_OUTPUT":"16"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"disengage","CFG_VARIABLE_VALUE":"Did they Finance?","CFG_OUTPUT":"exit03;optional"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"leave_floor","CFG_OUTPUT":"Step\u003Cbr\u003EAway"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"3","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"floor_position","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"4","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"floor_return","CFG_OUTPUT":"I Am\u003Cbr\u003EBack"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"4","CFG_VARIABLE_NAME":"button_input","CFG_VARIABLE_VALUE":"floor_return","CFG_OUTPUT":"none"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"4","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"gray","CFG_OUTPUT":"'#808080'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"4","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"columns","CFG_OUTPUT":"4"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"4","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"hfc_name","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1","CFG_OUTPUT":"floor_position"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1-header","CFG_OUTPUT":"'Position'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"exit","CFG_OUTPUT":"Exit\u003Cbr\u003EFloor"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"button_input-header","CFG_VARIABLE_VALUE":"exit","CFG_OUTPUT":"Are You Sure?"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"exit","CFG_VARIABLE_VALUE":"Yes. Remove me from the list","CFG_OUTPUT":""},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"black","CFG_OUTPUT":"'#000000'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2-header","CFG_OUTPUT":"'HFC'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3-header","CFG_OUTPUT":"'Status'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"name_sequence","CFG_OUTPUT":"- value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"button_input-submit","CFG_VARIABLE_VALUE":"exit","CFG_OUTPUT":"No"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"5","CFG_VARIABLE_NAME":"button_input","CFG_VARIABLE_VALUE":"exit","CFG_OUTPUT":"button"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"6","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2-header_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"6","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3-header_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"6","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"status_name","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"6","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1-header_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"6","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"white","CFG_OUTPUT":"'#FFFFFF'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"6","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3_font-weight","CFG_OUTPUT":"normal"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3-header_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1-header_font-weight","CFG_OUTPUT":"bold"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2_font-weight","CFG_OUTPUT":"normal"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"brown","CFG_OUTPUT":"'#A52A2A'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"status_text_color","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2-header_font-weight","CFG_OUTPUT":"bold"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1-header_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3-header_font-weight","CFG_OUTPUT":"bold"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1_font-weight","CFG_OUTPUT":"normal"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"7","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2-header_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2-header_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"hfcstatus","CFG_VARIABLE_VALUE":"status_background_color","CFG_OUTPUT":"value"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"color","CFG_VARIABLE_VALUE":"blue","CFG_OUTPUT":"'#0000FF'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3-header_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1-header_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"button","CFG_VARIABLE_VALUE":"lookup","CFG_OUTPUT":"Lookup\u003Cbr\u003ECustomer"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"8","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"9","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2-header_text-align","CFG_OUTPUT":"center !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"9","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1_text-align","CFG_OUTPUT":"center !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"9","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3-header_text-align","CFG_OUTPUT":"center !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"9","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column1-header_text-align","CFG_OUTPUT":"center !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"10","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2","CFG_OUTPUT":"hfc_name name_sequence"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"11","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"12","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"13","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"14","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column2_text-align","CFG_OUTPUT":"left !important"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"15","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3","CFG_OUTPUT":"status_name engagements"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"16","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3_font-family","CFG_OUTPUT":"'Helvetica'"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"17","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3_font-size","CFG_OUTPUT":"18px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"18","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3_margin","CFG_OUTPUT":"2px"},{"CFG_STORE_NUMBER":"0","CFG_CONTROLLER":"UI","CFG_VARIABLE_ORDER":"19","CFG_VARIABLE_NAME":"hfclist","CFG_VARIABLE_VALUE":"column3_text-align","CFG_OUTPUT":"left !important"}]}, );
+pnSubscribe();
+});</script>
+    </body>
 </html>
