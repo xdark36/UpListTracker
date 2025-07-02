@@ -1,0 +1,176 @@
+/*****************************************************
+ *****************************************************
+  FILE:             otb.js
+  CREATION DATE:    Aug 17, 2021
+  AUTHOR:           Isaac Kissiva
+
+  MODIFICATION HISTORY:
+  08/17/21          IK		Initial Creation
+  10/28/21			EM		Added Employee ID for Split the Wealth
+
+ *****************************************************
+ *****************************************************/
+
+var PurePromise = {
+
+	init : function() {
+		$(document).ready(function(){
+			var searchBox = $('#hdnSearchBox').val();
+			var table = $('#datatables').DataTable({
+				//bJQueryUI: true,
+				bStateSave: false,
+				bProcessing: true,
+				bPaginate: true,
+				bInfo: true,
+				bDeferRender: true,
+				scrollY: "450px",
+				lengthMenu: [ [10, 25, 50, 100, 150, 200, 500, -1], [10, 25, 50, 100, 150, 200, 500, "All"] ],
+				pageLength: 10,
+				order: [[ 1, "asc" ]],
+				oSearch: {"sSearch": searchBox},
+				aoColumnDefs:
+				[
+		           {"aTargets":[0]},
+		           {"aTargets":[1]},
+		           {"aTargets":[2]},
+		           {"aTargets":[3]},
+		           {"aTargets":[4]},
+				   {"aTargets":[5]},
+				   {"aTargets":[6]},
+			    ],
+			});
+		});
+
+		$('body')
+		.on('click', '#btnclear', PurePromise.clearSearchForm)
+		.on('click', '#btnCalculateCommission', PurePromise.calculateCommission)
+		.on('blur', '#totalSales', PurePromise.isPositive)
+		.on('change', '#fiscalMonth', PurePromise.getFiscalInfo)
+		.on('change', '#store', PurePromise.getHFCs);
+	},
+
+	getFiscalInfo: function(){
+		let fiscalMonth = $('#fiscalMonth').val();
+		let fiscalYear = $('#fiscalYear').val();
+		//let fiscalYear = (window.nextMonthNum==13 && parseInt(fiscalMonth)==1)?(parseInt(window.currentFiscalYear)+1):window.currentFiscalYear;
+		$.ajax({
+	        url: $('#baseUrl').val() + 'index.php/main/getFiscalInfo',
+	        type: 'POST',
+	    	data : { fiscalMonth : fiscalMonth, fiscalYear : fiscalYear},
+	        success: function (response){
+	        	let data = $.parseJSON(response);
+	        	$('#fiscalMonth').val(data.fiscalMonth);
+				$('#fiscalYear').val(data.fiscalYear);
+				$('#calendarDate').val(data.firstday);
+				$('#fiscalBeginDate').val(data.fiscal.FISCALBEGINDATE);
+				$('#fiscalEndDate').val(data.fiscal.FISCALENDDATE);
+				$('#daysInMonth').val(data.fiscal.DAYSINMONTH);
+				$('#monthType').val(data.fiscal.MONTHTYPE==4?0:1);
+				$('#ppPercentage').val('');
+				$('#ppCommission').val('');
+				$('#divDifference1').addClass('hide');
+				$('#divDifference2').addClass('hide');
+
+				window.commissions = data.commissions;
+	        }
+	    });
+	},
+
+	isPositive: function() {
+		if ($(this).val()<0){
+			alert('Invalid value for Pure Promise sales');
+			$(this).val('');
+		}
+	},
+
+	/* DONE: Split the Wealth */
+	getHFCs: function() {
+		var options = '<option value="">HFC</option>', strnbr = $('#store').val();
+		if (strnbr==''){
+			$('#hfc').html(options);
+		} else {
+			$.ajax({
+		        url: $('#datatables').data('url') + '/checklist/getHFCs',
+		        type: 'POST',
+		    	data : { params : JSON.stringify({strnbr : strnbr})},
+		        success: function (data){
+		        	var hfcs = $.parseJSON(data);
+		        	if (hfcs){
+		        		hfcs.forEach(function(hfc){
+			        		options += '<option value="' + hfc.EMPNUM + '-' + hfc.PSLSMN + '" data-id="' + hfc.USRID.trim() + '">' + Otb.ucwords(hfc.PNAME) + '</option>';
+			        	});
+		        	}
+		        	$('#hfc').html(options);
+		        }
+		    });
+		}
+	},
+
+	calculateCommission: function() {
+		var percent = 0;
+		var amount = $('#totalSales').val();
+		var next = 999;
+		var diff = 0;
+		var maxpercent = 0;
+		var com = 0;
+		var newcomdiff = 0;
+		var msg = function(diff, percent, newcomdiff){
+			return 'You need  $'+diff+' in Pure Promise sales to move to a '+percent+'% tier and make $'+newcomdiff+' more in Pure Promise commission.';
+		}
+		$.each(window.commissions, function(i, row){
+			if (maxpercent < row.WCCMPCT){
+		   		maxpercent = row.WCCMPCT;
+		   	}
+		});
+		$.each(window.commissions, function(i, row){
+			if (row.WCLAMT <= amount && row.WCHAMT >= amount){
+		   		percent = row.WCCMPCT;
+		   		next = i + 1;
+		   	}
+		});
+		percent = percent==0?maxpercent:percent;
+		com = $('#totalSales').val() * percent / 100;
+		if (window.commissions[next]!=undefined){
+			diff = window.commissions[next].WCLAMT - amount;
+			newcomdiff = window.commissions[next].WCLAMT * window.commissions[next].WCCMPCT / 100 - com;
+			$('#divDifference1').text(msg(diff, window.commissions[next].WCCMPCT, newcomdiff));
+			$('#divDifference1').removeClass('hide');
+		} else {
+			$('#divDifference1').text('');
+			$('#divDifference1').addClass('hide');
+		}
+		if (window.commissions[next+1]!=undefined){
+			diff = window.commissions[next+1].WCLAMT - amount;
+			newcomdiff = window.commissions[next+1].WCLAMT * window.commissions[next+1].WCCMPCT / 100 - com;
+			$('#divDifference2').text(msg(diff, window.commissions[next+1].WCCMPCT, newcomdiff));
+			$('#divDifference2').removeClass('hide');
+		} else {
+			$('#divDifference2').text('');
+			$('#divDifference2').addClass('hide');
+		}
+		$('#ppPercentage').val(percent);
+		$('#ppCommission').val($('#totalSales').val() * percent / 100);
+		$('#btnCalculateCommission').blur();
+	},
+
+	ucwords: function(str) {
+		str = str.toLowerCase();
+		var words = str.split(' ');
+		str = '';
+		for (var i = 0; i < words.length; i++) {
+			var word = words[i];
+			word = word.charAt(0).toUpperCase() + word.slice(1);
+			if (i > 0) { str = str + ' '; }
+			str = str + word;
+		}
+		return str;
+	},
+
+	clearSearchForm: function(e) {
+		console.log('Cleared...');
+		e.preventDefault();
+		$("option:selected").prop("selected", false);
+	},
+};
+
+PurePromise.init();

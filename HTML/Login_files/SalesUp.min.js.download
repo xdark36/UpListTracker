@@ -1,0 +1,318 @@
+/*****************************************************
+ *****************************************************
+  FILE:             SalesUp.js
+  CREATION DATE:    Aug 30, 2021
+  AUTHOR:           Isaac Kissiva
+
+  MODIFICATION HISTORY:
+  08/30/21          IK     Initial Creation
+
+
+ *****************************************************
+ *****************************************************/
+
+var SalesUp = {
+
+    hfcstatus: null,
+    hfcToMark: null,
+
+	init : function(hfcstatus, ajax_notifications){
+
+        SalesUp.hfcstatus = hfcstatus;
+
+        $(window).on('resize', function(){
+            if ($('#salesUpArea').is(':visible')){
+                SalesUp.setWindowPosition();
+            }
+        });
+
+		$('body')
+		.on('click', '#btnSalesUpStatus',    SalesUp.openSalesUp    )
+		.on('click', '#btnCloseSalesUp',     SalesUp.closeSalesUp   )
+		.on('click', '#btnShowLeaveFloor',   SalesUp.showLeaveFloor )
+        .on('click', '#btnLeaveFloor',       SalesUp.leaveFloor     )
+        .on('click', '.options-leave_floor', SalesUp.leaveFloor     )
+        .on('click', '.connect-manager',     SalesUp.moveConnectHFC )
+        .on('click', '.options-manager',     SalesUp.markHFC        )
+        .on('click', '.mark-hfc-manager',    SalesUp.openMarkHFC    )
+        .on('click', '#saveManagerConnect',  SalesUp.saveHFCsList   )
+        .on('click', '#btnFloorReturn',      SalesUp.floorReturn    );
+
+        if (ajax_notifications){
+            SalesUp.showNotification();
+            setInterval(SalesUp.showNotification, 600000);
+        }
+	},
+
+    initHFCTable: function(){
+        try {
+            $('#tblConnectHFCs').tableDnD({
+                onDragClass : "hfcRowDrag",
+                onDrop: function(table, row) {
+                    $('#saveManagerConnect').prop('disabled', false);
+                }
+            });
+        } catch(e) {
+            console.log(e);
+        }
+    },
+
+    saveHFCsList: function(){
+        var rows = $("#tblConnectHFCs").find("tbody>tr");
+        var payload = {
+            'action' : 'move',
+            'hfcs' : [],
+        };
+        for (var i=0; i<rows.length; i++) {
+            payload.hfcs.push({
+                'strno' : $(rows[i]).data('strno'),
+                'empno' : $(rows[i]).data('empno'),
+                'ipaddress' : $(rows[i]).data('ipaddress'),
+                'old_position' : $(rows[i]).data('position'),
+                'new_position' : i + 1,
+            });
+        }
+        SalesUp.getConnectHFCs(payload);
+    },
+
+    showLeaveFloor: function()
+    {
+        var button_input = $('#btnShowLeaveFloor').data('buttoninput');
+        if ($('#leaveFloorWindow').is(':visible') || button_input == 'none'){
+            $('#leaveFloorWindow').modal('hide');
+            SalesUp.leaveFloor();
+        } else {
+            var formHeader = SalesUp.getConfigValue('UI', 'button_input-header', 'leave_floor');
+            var btnCaption = SalesUp.getConfigValue('UI', 'button_input-submit', 'leave_floor');
+            if (button_input == 'button'){
+                SalesUp.showButtonInput('leave_floor', '', '', formHeader, 'leaveFloorWindow');
+            } else {
+                SalesUp.showButtonInput('leave_floor', 'btnLeaveFloor', btnCaption, formHeader, 'leaveFloorWindow');
+            }
+        }
+    },
+
+    // btnName='btnLeaveFloor', btncaption='Leave', title=Leave Floor, windowName='leaveFloorWindow'
+    showButtonInput: function(action, btnName, btncaption, title, windowName, engage=1){
+        var addButton = btnName == '' ? [] : [{id: btnName, name: btncaption, class: 'btn btn-danger pull-right dropdown-button', data: ''}];
+        $.ajax({
+            data: { action : action, engage : engage },
+            type: 'post',
+            url: ShopdataUI.baseURL + 'index.php/main/showButtonInput',
+            dataType: 'json',
+            global: false,
+            success: function (response) {
+                if(response.success) {
+                    shopCartUI.openModal('modal-md', '<i class="fa fa-list-alt"></i> ' + title, response.data.view, windowName, addButton);
+                } else {
+                    shopCartUI.handleFailedAjaxCall(response);
+                }                
+            },
+            error: function (response) {
+                shopCartUI.openModal('modal-md', 'Oops, an error occurred', 'Try refreshing the page and trying again.', 'errorModalWindow');
+            }
+        });
+    },
+
+    openMarkHFC: function(){
+        var name = $(this).data('name'), engage = $(this).data('engagements')=='' ? 1 : 0;
+        SalesUp.hfcToMark = {
+            strno: $(this).data('strno'),
+            empno: $(this).data('empno'),
+            ipaddress: $(this).data('ipaddress'),
+            old_position: $(this).data('position'),
+            new_position: $(this).data('position'),
+            action: '',
+            status: '',
+        }
+        SalesUp.showButtonInput('', '', '', 'Mark ' + name, 'markHFCWindow', engage);
+    },
+
+    markHFC: function(e){
+        e.preventDefault();
+        $('#markHFCWindow').modal('hide');
+        SalesUp.hfcToMark.action = $(this).data('action');
+        SalesUp.hfcToMark.status = $(this).data('status');
+        SalesUp.getConnectHFCs({
+            action: 'mark',
+            hfcs:[SalesUp.hfcToMark]
+        });
+    },
+
+    moveConnectHFC: function(){
+        if (true){
+            SalesUp.getConnectHFCs({
+                action: $(this).data('action'),
+                hfcs : [{
+                    strno: $(this).data('strno'),
+                    empno: $(this).data('empno'),
+                    ipaddress: $(this).data('ipaddress'),
+                    old_position: $(this).data('position'),
+                    new_position: $(this).data('dir') == 'up' ? parseInt($(this).data('position')) - 1 : parseInt($(this).data('position')) + 1,
+                }]
+            });
+        } else {
+            console.log('FALSE');
+        }
+    },
+
+    getConnectHFCs: function(parms){
+        $.ajax({
+            data: parms,
+            type: 'post',
+            url: ShopdataUI.baseURL + 'index.php/main/getConnectHFCs',
+            dataType: 'json',
+            success: function (response) {
+                if(response.success) {
+                    $('#managerConnectArea').html('').html(response.data.view);
+                    $('#mainWindow').addClass('hide');
+                    $('#managerConnectArea').removeClass('hide');
+                    $('#footer').addClass('hide');
+                    $('#saveManagerConnect').prop('disabled', true);
+                    SalesUp.initHFCTable();
+                } else {
+                    shopCartUI.handleFailedAjaxCall(response);
+                }
+            },
+            error: function (response) {
+                shopCartUI.openModal('modal-md', 'Oops, an error occurred', 'Try refreshing the page and trying again.', 'errorModalWindow');
+            }
+        });
+    },
+
+	leaveFloor: function(e){
+        e.preventDefault();
+		$.ajax({
+            data: { status: $(this).data('status'), button_input_data : ShopdataUI.getButtonInputData() },
+            type: 'post',
+            url: ShopdataUI.baseURL + 'index.php/main/leaveFloorSalesUp',
+            dataType: 'json',
+            global: false,
+            success: function (response) {
+                if(response.success) {
+                    $('#leaveFloorWindow').modal('hide');
+                    window.location.reload();
+                } else {
+                    shopCartUI.handleFailedAjaxCall(response);
+                }
+            },
+            error: function (response) {
+                shopCartUI.openModal('modal-md', 'Oops, an error occurred', 'Try refreshing the page and trying again.', 'errorModalWindow');
+            }
+        });
+	},
+
+    floorReturn: function(){
+        $.ajax({
+            data: { status: $(this).data('status'), button_input_data : ShopdataUI.getButtonInputData() },
+            type: 'post',
+            url: ShopdataUI.baseURL + 'index.php/main/floorReturnSalesUp',
+            dataType: 'json',
+            success: function (response) {
+                if(response.success) {
+                    window.location.reload();
+                } else {
+                    shopCartUI.handleFailedAjaxCall(response);
+                }
+            },
+            error: function (response) {
+                shopCartUI.openModal('modal-md', 'Oops, an error occurred', 'Try refreshing the page and trying again.', 'errorModalWindow');
+            }
+        });
+    },
+
+	closeSalesUp: function(){
+		$('#salesUpArea').addClass('hide');
+	},
+
+	openSalesUp: function(){
+        $.ajax({
+            data: {},
+            type: 'post',
+            url: ShopdataUI.baseURL + 'index.php/main/openSalesUp',
+            dataType: 'json',
+            success: function (response) {
+                if(response.success) {
+                    shopCartUI.updateAppSections();
+                    $('#salesUpArea').html('').html(response.data.view);
+                    $('#salesUpArea').css('width', SalesUp.getConfigValue('UI','hfclist','table_width'));                    ;
+                    SalesUp.setWindowPosition();
+                    $('#salesUpArea').removeClass('hide');
+                    setTimeout(function(){ $('#salesUpArea').addClass('hide'); }, 600000);                  
+                } else {
+                    shopCartUI.handleFailedAjaxCall(response);
+                }
+            },
+            error: function (response) {
+                shopCartUI.openModal('modal-md', 'Oops, an error occurred', 'Try refreshing the page and trying again.', 'errorModalWindow');
+            }
+        });
+    },
+
+    setWindowPosition: function(){
+        var pos = (window.innerWidth - $('#salesUpArea').outerWidth())/2;
+        $('#salesUpArea').css('left',  pos);
+    },
+
+    showNotification: function () {   
+        if (!Notification) {
+            $('body').append('<h4 style="color:red">*Browser does not support Web Notification</h4>');
+            return;
+        }
+        if (Notification.permission !== "granted") {       
+            Notification.requestPermission();
+        } else {        
+            $.ajax({
+                url: ShopdataUI.baseURL + 'index.php/main/notify',
+                type: "POST",
+                global: false,
+                success: function(data, textStatus, jqXHR) {
+                    var data = jQuery.parseJSON(data);
+                    if(data.result == true) {
+                        var data_notif = data.notifications;
+                        for (var i = data_notif.length - 1; i >= 0; i--) {
+                            var theurl = data_notif[i]['url'];
+                            var notification = new Notification(data_notif[i]['title'], data_notif[i]);
+                            notification.onclick = function () {
+                                notification.close();     
+                            };
+                            setTimeout(function(){
+                                notification.close();
+                            }, 5000);
+                        };
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {}
+            }); 
+        }
+    },
+
+    getConfigValue: function(controller, variable='', value='', ){
+        var val = '';
+        SalesUp.hfcstatus.CONFIG.filter(function(cfg){ 
+            if (controller!='' && variable!='' && value!=''){
+                if (cfg.CFG_CONTROLLER.trim().toLowerCase()==controller.toLowerCase()
+                    && cfg.CFG_VARIABLE_NAME.trim().toLowerCase()==variable.toLowerCase() 
+                    && cfg.CFG_VARIABLE_VALUE.trim().toLowerCase()==value.toLowerCase())
+                {
+                    val = cfg.CFG_OUTPUT.replace("'","");
+                }
+            } else if (controller!='' && variable!='' && value==''){
+                if (cfg.CFG_CONTROLLER.trim().toLowerCase()==controller.toLowerCase()
+                    && cfg.CFG_VARIABLE_NAME.trim().toLowerCase()==variable.toLowerCase())
+                {
+                    if (typeof val != 'object'){ val = []; }
+                    val.push(cfg);
+                }
+            } else if (controller!='' && variable=='' && value==''){
+                if (cfg.CFG_CONTROLLER.trim().toLowerCase()==controller.toLowerCase())
+                {
+                    if (typeof val != 'object'){ val = []; }
+                    val.push(cfg);
+                }
+            }
+        });
+        return val;
+    },
+
+};

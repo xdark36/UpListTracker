@@ -1,0 +1,60 @@
+var Canvas =
+{
+	init: () => {
+		// Listen for orientation changes
+		window.addEventListener("orientationchange", function() {
+			try {
+				var htmlCanvas = document.getElementsByTagName("canvas"), 	context = htmlCanvas.getContext('2d');
+
+				htmlCanvas.width = window.innerWidth;
+				htmlCanvas.height = window.innerHeight;
+				htmlCanvas.style.left = "0px";
+				htmlCanvas.style.top = "0px";
+				context.strokeRect(0, 0, window.innerWidth, window.innerHeight);
+			} catch (e) {}
+
+		}, false);
+	},
+
+	setText: (ctx, width, height, msg, colorScheme, fontSize) => {
+        var bg, fg;
+        switch(colorScheme)
+        {
+            case 0: bg = '#FFF'; fg = '#000'; break;    // White bg, Black fg
+            case 1: bg = '#000'; fg = '#FFF'; break;    // Black bg, White fg
+            case 2: bg = '#F00'; fg = '#FFF'; break;    // Red bg, White fg
+        }
+
+        // Background style
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, width, height);
+
+        // Foreground style
+        ctx.fillStyle = fg;
+        ctx.font = "bold " + fontSize.toString() + "px Arial";
+
+        // Write text
+        var msgWidth = ctx.measureText(msg).width;
+        ctx.fillText(msg , (width/2) - (msgWidth / 2), height / 2);
+    },
+
+	setImage: (selector, imgData, msg) => {
+		var previewCanvas = selector[0],
+    		previewCtx    = previewCanvas.getContext('2d');
+
+        //  Assert signature image set
+    	if(imgData.length > 0){
+            // Render signature
+    		var preview = new Image();
+    		preview.src = imgData;
+    		preview.onload = function(){
+    			previewCtx.drawImage(preview, 0, 0, 300, 150);
+    		};
+    	} else {
+            // Render error
+    		Canvas.setText(previewCtx, 300, 150, msg, 0, 20);
+    	}
+	},
+};
+
+Canvas.init();

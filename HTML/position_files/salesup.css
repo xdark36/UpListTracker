@@ -1,0 +1,166 @@
+#salesUpArea {
+    border:  1px solid black; 
+    position: fixed; 
+    bottom: 5%;
+    border-radius: 10px;
+    z-index: 2000;
+    background-color: white;
+    -webkit-animation-name: animatetop;
+    -webkit-animation-duration: 0.4s;
+    animation-name: animatetop;
+    animation-duration: 0.4s
+}
+
+/* Add Animation */
+@-webkit-keyframes animatetop {
+  from {top:-100px; opacity:0} 
+  to {top:0; opacity:1}
+}
+
+@keyframes animatetop {
+  from {top:-100px; opacity:0}
+  to {top:0; opacity:1}
+}
+
+#salesup_header {
+    position: relative; 
+    border:  1px solid black !important;
+    margin:  10px 10px 10px 10px;
+    text-align:  center !important;
+    font-size:  28px;
+    border-radius: 5px;
+    font-family: Helvetica !important;
+}
+
+#salesup_body {
+    position: relative;
+    border:  1px solid #ccc !important;
+    margin:  5px 10px 5px 10px;
+    height:  400px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#salesup_footer {
+    position: relative; 
+    margin:  10px 10px 10px 10px;
+    height:  42px;
+}
+
+#salesup table {
+    border:  1px solid black !important;
+    text-align:  center !important;
+}
+
+#salesup tbody {
+    border:  1px solid black !important;
+    text-align:  center !important;
+}
+
+#salesup th {
+    border:  1px solid black !important;
+    text-align:  center !important;
+}
+
+#salesup tr {
+    border:  1px solid black !important;
+    text-align:  center !important;
+}
+
+#salesup td {
+    border:  1px solid black !important;
+    text-align:  center !important;
+}
+
+.btnsalesup {
+    width:  150px;
+    background-color: #c1e4f7;
+    border:  1px solid black;
+    border-radius: 5px;
+}
+
+.salesup-me {
+    border:  2px solid #0c7cba !important;
+}
+
+#btnRefreshSalesUp {
+    padding: 5px 0px 0px 10px !important;
+}
+
+#btnSalesUpStatus {
+    border: 1px solid black;
+    margin-bottom:  5px;
+    font-size:  30px;
+    text-align:  center;
+    border-radius: 5px;
+}
+
+#frmButtonInput label{
+    font-size:  20px;
+}
+
+#tblConnectHFCs table {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 1px solid #000;
+    margin: 0px;
+    padding: 0px;
+    font-size:  20px !important;
+}
+
+#tblConnectHFCs tbody {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 1px solid #000;
+    margin: 0px;
+    padding: 0px;
+    font-size:  20px !important;
+}
+
+#tblConnectHFCs th {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 1px solid #000;
+    margin: 0px;
+    padding: 5px;
+    font-size:  20px !important;
+}
+
+#tblConnectHFCs tr {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 1px solid #000;
+    margin: 0px;
+    padding: 0px;
+    font-size:  20px !important;
+}
+
+#tblConnectHFCs td {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 1px solid #000;
+    margin: 0px;
+    padding: 5px;
+    font-size:  20px !important;
+}
+
+#managerConnectArea {
+    margin: 0 10px 0 10px !important; 
+}
+
+#managerConnectArea label {
+    font-size:  20px !important;
+}
+
+#datatables a {
+    color:  blue !important;
+    text-decoration: none;
+}
+
+.hfcRowDrag {
+    background-color: #FFDAB9 !important;
+}
+
+#tblConnectHFCs thead tr {
+    height:  60px !important;
+}
+
+#tblConnectHFCs tbody tr:hover {
+    background-color: #FFFFE0 !important;
+    color:  black !important;
+}

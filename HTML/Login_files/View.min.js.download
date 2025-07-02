@@ -1,0 +1,330 @@
+var View =
+{
+    multipleLoading: false,
+    inboxActive: false,
+    Avail_Active_SKU: '',
+    platform : navigator.platform.toLowerCase(),
+
+    loader: function(isHFC, isSingleColumn, isTwoColumns, isThreeColumns, isLandscape)
+    {
+
+
+    },
+
+    Resize: function()
+    {
+    	// TODO
+		var screenWidth = $(window).width();
+		var screenHeight = $(window).height();
+		var halfPage = screenWidth / 2;
+		var platform = navigator.platform;
+
+		var mainWidth = $('#main').width();
+		var mainHeight = $('#main').height();
+
+		$("div#shopdata").width( View.platform == 'ipad' ? screen.width * 1.68 : screenWidth );
+
+		if(screenHeight < 700)
+        {
+			// makeLandscape
+            $('#main').css({"margin": "10px auto 0px -10px"});
+
+            $('.scrollResults').css({"max-height":"230px"});
+            $('.scrollResults').height(230);
+
+            /*
+            $('.moreOptionsHolder,#opBanner').width(420);
+
+            $('#moreRelatedSection').width(500);
+            $('#moreRelatedHolder,#relBanner').width(500);
+            */
+
+            $('.mainImg').css({"max-width":"180px"});
+            $('.mainImgHolder').css({"width":"180px"});
+            $('.mainAvailHolder').css({"width":"100px"});
+
+            $('body').css({"font-size":"14px"});
+            //$('body').css({"overflow":"auto"});
+
+
+            $('.cartRight').css({'clear':'none','width':'55px'});
+		}
+        else
+        {
+			// makePortrait
+            $('#main').css({"margin": "30px auto 0 auto;"});
+
+            $('.scrollResults').css({"max-height":"600px"});
+            $('.scrollResults').height(230);
+
+            /*
+            $('.moreOptionsHolder,#opBanner').width(420);
+
+            $('#moreRelatedSection').css({"width":"auto"});
+            $('#moreRelatedHolder,#relBanner').width(945);
+            */
+
+            $('.mainImg').css({"max-width":"288px"});
+            $('.mainImgHolder').css({"width":"288px"});
+            $('.mainAvailHolder').css({"width":"288px"});
+
+            $('body').css({"font-size":"16px"});
+
+            $('.cartRight').css({'clear':'both','width':'200px'});
+		}
+    },
+
+    ResizePanels: function()
+    {
+    	var availPanel = $('#divavailability');
+        var cartActive = (ShopdataUI.data.SDCARTID !== '0');
+
+        availPanel
+            .toggleClass('availCart',      (!View.inboxActive && cartActive))
+            .toggleClass('inboxAvailCart', (View.inboxActive  && cartActive));
+    },
+
+    Inbox_Update: function()
+    {
+        shopCartUI.reloadCustomers();
+    },
+
+    Loading_On: function(multipleOn)
+    {
+        $('#loadNotify').show();
+    },
+
+    Loading_Off: function(multipleOff)
+    {
+        $('#loadNotify').hide();
+    },
+
+    Avail_Update: function(sku,searchType,row)
+    {
+        var searchWindows =
+            [
+                'searchedResults',      // Search
+                'searchResults',        // Saved Search Results
+                'searchedSkus'          // Viewed Items
+            ];
+        if(typeof(searchType) !== 'undefined'){
+            if(searchType=="AHINQID" && arguments.length==3){
+                // Load view
+                $.post(shopCartUI.baseURL+'index.php/main/getSkuAvail',{"row":row},
+                    function(data)
+                    {
+                        // Render view
+                        $('#productInfoSection').html(data);
+                    }
+                ).fail(function(data) {shopCartUI.handleCartError(data);});
+                return;
+            }else{
+                // Close search window
+            }
+        }
+
+        // Load view
+        $.post(shopCartUI.baseURL+'index.php/main/getSkuAvail?sku=' + sku,
+            function(data)
+            {
+                // Render view
+                $('#productInfoSection').html(data);
+                shopCartUI.enableComponentAvailability();
+                // $('#txtSearchSKU').val('');
+                // $("body").css("overflow", "auto"); // to make sure only one finger is needed to scroll
+                // var ViewsToUpdate=[{"Customers":false,"Avail":true,"Cart":false}];
+                // shopCartUI.updateCustomersAvailAndCart(data,ViewsToUpdate);
+            }
+        ).fail(function(data) {shopCartUI.handleCartError(data);});
+    },
+
+    Cart_Update: function()
+    {
+        // Assert cartId set
+        if(ShopdataUI.data.SDCARTID !== '0')
+        {
+            // Get cart view
+            $.post(shopCartUI.baseURL+'index.php/main/hfcViewCart',
+                function(data)
+                {
+                    var ViewsToUpdate=[{"Customers":true,"Avail":true,"Cart":true}];
+                    shopCartUI.updateCustomersAvailAndCart(data,ViewsToUpdate);
+
+                    $('#cmdExitCustomer').show();
+                }).fail(function(data) {shopCartUI.handleCartError(data);});
+
+        }
+
+    },
+
+    QtySpinners_Init: function()
+    {
+        $(document).ready(
+            function()
+            {
+                $(".swipespinner").eerospinner(
+                    {
+                        min:0,
+                        max:99,
+                        change:function(){
+                            shopCartUI.changeItemQuantity(arguments[0],arguments[1]);
+                        }
+                    }
+                );
+            }
+        );
+    },
+
+    Open: function(id)
+    {
+        // Calculate center
+        var popup = $('#'+id);
+        var X = View.platform == 'ipad' ? (screen.width / 1.60) - (popup.width() / 2) : ($(window).width() / 2) - (popup.width() / 2);
+        var Y = View.platform == 'ipad' ? (screen.height / 3.20) - (popup.height() / 2) : ($(window).height() / 2) - (popup.height() / 2);
+
+        // Reset scroll to top
+        window.scrollTo(0, 0);
+
+        // Block background
+        $("#modalBg").width( View.platform == 'ipad' ? screen.width * 1.25 : $(window).width() + 5);
+        $("#modalBg").height( View.platform == 'ipad' ? screen.height : $(window).height());
+
+        $('#modalBg').show();
+        $('body').css({"overflow":"hidden"});
+
+        // Center and show popup
+        if(Y<0){
+            Y=10;
+        }
+
+        popup
+            .css(
+                {
+                    'position': 'absolute',
+                    'top':  Y+'px',
+                    'left': X+'px',
+                    'margin': 'auto',
+                    'width':'95%',
+                    'height':'90%'
+                }
+            )
+            .show();
+    },
+
+    Close: function(id)
+    {
+        $('#modalBg').hide();
+        $('body').css({"overflow-y":"auto"});
+        $('#'+id).hide();
+
+        // Reset scroll to top
+        window.scrollTo(0, 0);
+        $('body').unbind("mousewheel");
+        $('#mainWindow').show().css('visibility', 'visible');
+    },
+
+    MainData_Open: function(title, html)
+    {
+        $('#mainDataTitle').html('<h2>'+title+'</h2>');
+        $('#mainDataText').html(html).removeClass('makeOpaque');
+        $('#mainDataText2').html('');
+        $('#mainDataText3').html('');
+        $('#mainDataText input').prop("readonly",false);
+        View.Open('mainData');
+    },
+
+    MainData_Close: function()
+    {
+        View.Close('mainData');
+    },
+
+    Search_Open: function()
+    {
+        $('#searchedResults').addClass('ajax-loader loadNotifyCenter');
+        View.Open('searchedResults');
+    },
+
+    Search_Close: function()
+    {
+        View.Close('searchedResults');
+    },
+
+    SearchResults_Open: function()
+    {
+        View.Open('searchResults');
+
+        // Enable image lazy loading
+        $('#innerSearchResults img.lazyload').lazyload({placeholder:shopCartUI.baseURL + 'images/loader.gif',container:'#innerSearchResults'});
+    },
+
+    SearchResults_Close: function()
+    {
+        View.Close('searchResults');
+    },
+
+    ViewedItems_Open: function()
+    {
+    	if (typeof($('#searchedSkus').html())!=='undefined'){
+    		View.Open('searchedSkus');
+    	} else {
+    		shopCartUI.displayMsg('No viewed items');
+    	}
+    },
+
+    ViewedItems_Close: function()
+    {
+		View.Close('searchedSkus');
+    }
+    ,//option selector plugin stuff start
+    getcssselAttr :function (o){
+        return o.attr('data-csssel');
+    },
+
+    getSkuAttr  :function(o){
+        return o.attr('data-sku');
+    },
+
+    optsel_hide: function(){
+        $('#optsel_hide').hide();
+        $('div.optsel').hide();
+        $('#optsel_optsel_').show();
+        $('#optsel_hide').hide();
+    },
+
+    optclickbutton : function( event, ui, id, csssel, sku) {
+        if(id=='optsel_hide'){
+            View.optsel_hide();
+            return;
+        }
+        var sel = csssel;
+        $(ui).parent().children('li').each(function(index)
+        {
+            var o = $(this).parents('div')[0];
+            $('#' + o.id + ' div').each(function(index){
+                $(this).css('display','none');
+                try{
+                    $(this).child(".optselclicked").hide();
+                }catch(err){
+
+                }
+            });
+        });
+
+        {
+            if(sel == '#') {
+                View.Avail_Update(sku);
+            } else if(sel=='') {
+                // do nothing picked the sku that is presently displayed
+            } else {
+                $(sel).css('display','inline-block');
+                try{
+                    $(sel+ " .optselclicked").show();
+                }catch(err){}
+                $('#optsel_hide').show();
+            }
+        }
+
+    }
+//option selector plugin stuff end
+};
+

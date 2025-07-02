@@ -10,25 +10,27 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED -> {
-                Timber.i("Boot completed, checking if monitoring should auto-start")
-                autoStartMonitoringIfEnabled(context)
+                Timber.i("Boot completed, starting position monitoring service")
+                startPositionMonitoringService(context)
             }
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
-                Timber.i("App updated, checking if monitoring should auto-start")
-                autoStartMonitoringIfEnabled(context)
+                Timber.i("App updated, starting position monitoring service")
+                startPositionMonitoringService(context)
             }
         }
     }
     
-    private fun autoStartMonitoringIfEnabled(context: Context) {
-        val prefs: SharedPreferences = context.getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
-        val autoStartEnabled = prefs.getBoolean("auto_start_on_boot", false)
-        
-        if (autoStartEnabled) {
-            Timber.i("Auto-start enabled, starting position monitoring service")
-            PositionMonitorService.startMonitoring(context)
-        } else {
-            Timber.d("Auto-start disabled, not starting monitoring service")
+    private fun startPositionMonitoringService(context: Context) {
+        try {
+            val serviceIntent = Intent(context, PositionMonitorService::class.java)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+            Timber.i("Position monitoring service started successfully")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to start position monitoring service")
         }
     }
 } 

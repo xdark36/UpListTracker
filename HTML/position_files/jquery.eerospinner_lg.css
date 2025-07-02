@@ -1,0 +1,102 @@
+ol,ul {
+	list-style: none
+}
+
+table {
+	border-collapse: collapse;
+	border-spacing: 0
+}
+
+caption,th,td {
+	text-align: left;
+	font-weight: normal;
+	vertical-align: middle
+}
+
+q,blockquote {
+	quotes: none
+}
+
+q:before,q:after,blockquote:before,blockquote:after {
+	content: "";
+	content: none
+}
+
+a img {
+	border: none
+}
+
+article,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary
+	{
+	display: block
+}
+
+.eerospinner-sprite,.eerospinner .decrease,.eerospinner .decrease[disabled],.eerospinner .increase,.eerospinner .value,.eerospinner .value .passive
+	{
+	background: url('../../images/spinner-sf0d5bd965d_lg.png') no-repeat;
+	background-size: 50px 260px;
+}
+
+.eerospinner {
+	height: 50px;
+	width: 149px;
+	overflow: hidden;
+	*zoom: 1;
+	-webkit-box-shadow: 0 3px 3px -4px #aaa;
+	-moz-box-shadow: 0 3px 3px -4px #aaa;
+	box-shadow: 0 3px 3px -4px #aaa
+}
+
+.eerospinner button,.eerospinner .value {
+	text-align: center;
+	display: block;
+	float: left;
+	height: 100%;
+	line-height: 48px;
+	margin: 0
+}
+
+.eerospinner button {
+	border: none;
+	width: 49px;
+	color: #e5312a;
+	font: 46px Arial bold;
+	padding: 0;
+	outline: none
+}
+
+.eerospinner .decrease {
+	background-position: 0px -103px;
+	cursor: pointer;
+	text-indent: -10000px
+}
+
+.eerospinner .decrease[disabled] {
+	background-position: 0px -103px;
+	cursor: default
+}
+
+.eerospinner .increase {
+	background-position: 0 -1px;
+	cursor: pointer;
+	text-indent: -10000px
+}
+
+.eerospinner .value {
+	background-position: 0 -210px;
+	width: 50px;
+	height: 52px;
+	border: none;
+	font-family: Arial;
+	color: #ffffff;
+	padding: 0px
+}
+
+.eerospinner .value.passive {
+	background-position: 0 -50px;
+	color: #f00;
+}
+
+.eerospinner .error,.eerospinner .invalid {
+	background: #aa0000
+}

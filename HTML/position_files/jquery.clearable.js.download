@@ -1,0 +1,52 @@
+jQuery.fn.clearable = function() {
+ 
+  $('.morelink').on('click', function() {
+    var $this = $(this);
+    if ($this.hasClass('less')) {
+      $this.removeClass('less');
+      $this.html(config.moreText);
+    } else {
+      $this.addClass('less');
+      $this.html(config.lessText);
+    }
+    $this.parent().prev().toggle();
+    $this.prev().toggle();
+    return false;
+  });
+ 
+  return $(this).each(function() {
+
+	$(this).css({'border-width': '0px', 'outline': 'none'})
+		.wrap('<div id="sq" class="divclearable"></div>')
+		.parent()
+		.attr('class', $(this).attr('class') + ' divclearable')
+		.append('<a class="clearlink" href="javascript:" tabindex="-1"></a>');
+
+	$('.clearlink')
+		.attr('title', 'Click to clear this textbox')
+		.click(function() {
+			
+			if ($(this).prev().attr('disabled')!='disabled') $(this).prev().val('').focus();
+			var cssselector = '';
+	    	switch($(this).prev()[0].id) {
+		        case 'SDCUSPHON1':
+		        	cssselector = 'SDCUSPTYP1';
+		            break;
+		        case 'SDCUSPHON2':
+		        	cssselector = 'SDCUSPTYP2';
+		            break;
+		        case 'SCSHPPHON1':
+		        	cssselector = 'SCSHPPTYP1';
+		            break;
+		        case 'SCSHPPHON2':
+		        	cssselector = 'SCSHPPTYP2';
+	    	}
+	    	if (cssselector.length != 0){
+		    	$('.'+cssselector).removeClass('buttonActive');
+		    	$('#'+cssselector).val('');
+		    	cssselector = '';
+		    }
+
+	});
+  });
+}

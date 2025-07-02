@@ -1,0 +1,366 @@
+var Search = {
+    isInit: false,
+    loadingResults: false,
+    filters: 0,
+    storesAvailability: false,
+    init: function() {
+        if (!Search.isInit) {
+            Search.isInit = true;
+            Search.viewSearchComponentList();
+            Search.applySearchFilters();
+            Search.loadMoreSearchResults()
+        }
+    },
+    destroy: function() {
+        $("body").off("change", "#filterOptions .checkbox input, #filterOptions select");
+        $("#filterOptions .checkbox input, #filterOptions select").unbind("change");
+        $("#filterOptions select").unbind("change");
+        $("#filterOptions .checkbox input").unbind("change");
+        $(parent.window.document).unbind("scroll");
+        $("body").off("click", ".searchComponentList");
+        $("#txtWord").val("");
+        Search.isInit = false;
+        Search.loadingResults = false
+    },
+    enhancedSearch: function(search, sequence, scrollLoad) {
+        if (search != "") {
+            search = search.replace(/[|&;$%@"<>()+,]/g, "");
+            var totalCount = $(".liveResultCount").html();
+            if (sequence > 0 && totalCount > sequence || sequence == 0) {
+                Search.filters = $(".cmdSearchSKU").prop("data-filters");
+                shopCartUI.lastSearch = search;
+                $("#txtWord, #txtWord2").blur();
+                $("#endOfResults").remove();
+                $.ajax({
+                    type: "post",
+                    url: shopCartUI.baseURL + "index.php/main/search",
+                    data: {
+                        search: search,
+                        sequence: sequence,
+                        filters: Search.filters
+                    },
+                    dataType: "json",
+                    success: function(data) {
+                        Search.loadingResults = false;
+                        if (data.success) {
+                            if (sequence == 0 || !scrollLoad) {
+                                $("#searchResultsArea #searchBody").html("")
+                            }
+                            if (data.data.total == 1 && data.data.type == "SKU") {
+                                shopCartUI.updateAppSections();
+                                $("#txtWord").val()
+                            } else if (data.data.total > 0) {
+                                Search.loadFilterView(data.data.results.options, data.data.results.filters);
+                                Search.loadResultsView(data.data.results.results, data.data.results.full_row_count, data.data.results.storesAvailability);                               
+                                $("#searchResultsArea #searchBody").after('<div id="endOfResults"></div>');
+                                if ($("#searchResultsArea").hasClass("hide") && sequence == 0) {
+                                    Search.toggleSearchWindow()
+                                }
+                                $("#txtWord2").val(search)
+                            } else {
+                                $("#txtWord").val();
+                                $("#searchResultsArea #searchBody").html("");
+                                var msg = Search.getErrorMessageText(search);
+                                shopCartUI.displayMsg(msg)
+                            }
+                            $(".liveResultCount").prop("rel", data.data.total).html(data.data.total)
+                        } else {
+                            shopCartUI.handleCartError(data)
+                        }
+                    },
+                    error: function(data, status, error) {
+						console.log(status);
+						console.log(error);
+                        Search.loadingResults = false;
+                        shopCartUI.handleCartError(data)
+                    }
+                })
+            }
+        } else {
+            shopCartUI.displayMsg("Search cannot be empty!")
+        }
+    },
+    getErrorMessageText: function(search) {
+        var msg = "No Results Found for <b>" + search + "</b>";
+        if (Search.filters) {
+            var values = Search.filters.split("&");
+            if (values.length) {
+                msg += " where ";
+                for (var i in values) {
+                    if (values[i]) {
+                        var filters = values[i].split("=");
+                        msg += "<b>" + decodeURIComponent(filters[0]) + "</b>" + " is <b>" + decodeURIComponent(filters[1]) + "</b> and "
+                    }
+                }
+                msg = msg.slice(0, -5)
+            }
+        }
+        return msg
+    },
+    loadResultsView: function(results, count, showStores) {
+        var view = '<div class="row">';
+        for (var i in results) {
+            var skuNumber = results[i].SKU;
+            view += '<div class="col-md-3 col-sm-2 col-xs-12">';
+            var linkObj = {
+                USER_ID: ShopdataUI.SDEMPNUM,
+                CART_ID: ShopdataUI.SDCARTID,
+                WISKUNBR: results[i].SKU,
+                SKUNBR: results[i].SKU,
+                SCSERL: results[i].SCSERL
+            };
+            view += "<div class='searchResultLink text-center' data-item='" + JSON.stringify(linkObj) + "'>";
+            view += '<div class="searchItemPrice">';
+            view += '<span class="searchMatch">' + (parseFloat(results[i].SEARCH_MATCH) * 100).toFixed(2) + '% </span>';          
+            if (results[i].SKU_PRICE < results[i].REG_PRICE) {
+                var priceBanner = "Now $" + Search.formatPrice(results[i].SKU_PRICE) + " was $" + Search.formatPrice(results[i].REG_PRICE);
+                priceBanner += "<br>Ends " + Search.formatPrice(results[i].SALE_ENDS);
+            } else {
+                var priceBanner = "$" + Search.formatPrice(results[i].SKU_PRICE);
+            }
+            view += '<span class="regPrice">' + priceBanner + "</span>";
+            view += '<span class="rowNumber">' + results[i].ROWNUMBER + ' of ' + count + '</span>';          
+            view += "</div>";
+            view += '<div class="searchResultItem" data-pieces="' + results[i].PIECES + '" filterkey="' + skuNumber + " " + results[i].ITEM_NAME + '">';
+            view += '<div class="searchResultStatus">';
+            var showAvailability = results[i].show_availability == true ? "" : "hide";
+            view += '<div class="del_avail ' + results[i].status[1] + " " + showAvailability + '">' + results[i].status[0] + "</div>";
+            view += '<div class="searchStatusArrow ' + results[i].status[1] + "-triangle " + showAvailability + '"></div>';
+            view += "</div>";
+            if (results[i].SKU_TYPE === "G") {
+                view += '<button class="btn btn-sm btn-default searchComponentList">Components</button>'
+            }
+            if (results[i].SKU.toString().substring(0, 1) == 9) {
+                view += '<div class="clearfix"></div>';
+                view += '<div class="HFC_App_Sprite i_clearance_flag"></div>'
+            }
+            view += '<div class="clearfix"></div>';
+
+            if ( showStores ){ 
+                var avails = '';
+                if ("TAKEWITH_STORES" in results[i]) avails += results[i].TAKEWITH_STORES;
+                if ("EXTRAS_STORES"   in results[i]) avails += results[i].EXTRAS_STORES;
+                if ( avails.trim() != '' ){
+                    view += '<div class="stores-availability-banner">';
+                    view += Search.availButtons(avails);
+                    view += '</div>';
+                    view += '<div class="clearfix"></div>';
+                }
+            }
+            
+            view += '<div class="searchResultImage">';
+            view += '<img src="' + results[i].image + '" class="img-responsive">';
+            view += "</div>";
+
+            if(results[i].FITS === 'N') {
+                view += '<div class="fitAlert" style="font-size:.7em"><i class="fa fa-exclamation-triangle"></i> ' + results[i].FIT_WARNING_TEXT + '</div>';
+            }
+
+            view += '<h4 class="searchResultSkuNumber">SKU: <span class="skuNumber">' + results[i].SKU + "</span></h4>";
+            view += '<p class="searchResultTitle">' + results[i].ITEM_NAME + "</p>";
+            view += '<div class="searchResultFooter">';
+            if (results[i].additional_info != "") {
+                view += '<span class="text-danger">' + results[i].additional_info + "</span>"
+            }
+            view += "</div>";
+            view += "</div>";
+            view += "</div>";
+            view += "</div>";
+            if ((parseInt(i) + 1) % 4 === 0) {
+                view += '</div><div class="row">'
+            }
+        }
+        view += "</div>";
+        $("#searchResultsArea #searchBody").append(view)
+    },
+    availButtons: function(avails) {
+        var arr = avails.split(';');
+        var btns = '';
+        $.each( arr, function(i, val) {
+            var a = val.split(',');
+            btns += '<button type="button" class="stores-icon-button">';
+            btns += '<span>' + a[0].trim() + '</span>';
+            btns += '<span class="stores-icon-button__badge">' + a[1] + '</span>';
+            btns += '</button>';
+        });
+        return btns;
+    },
+    formatPrice: function(price) {
+        return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    },
+    viewSearchComponentList: function() {
+        $("body").on("click", ".searchComponentList", function(event) {
+            event.preventDefault();
+            var data = JSON.parse($(this).closest(".searchResultLink").attr("data-item"));
+            $.ajax({
+                url: shopCartUI.baseURL + "index.php/main/getComponentAvailJson",
+                dataType: "json",
+                data: data,
+                type: "post",
+                success: function(data) {
+                    var noComps = false;
+                    if (data.success) {
+                        if (data.data) {
+                            if (data.data.components != "") {
+                                var skuDetails = data.data.sku_details;
+                                if (skuDetails) {
+                                    var html = '<div class="row">';
+                                    html += '<div class="col-md-4">';
+                                    html += '<img src="' + skuDetails.image + '" class="img-responsive">';
+                                    html += "</div>";
+                                    html += '<div class="col-md-8">';
+                                    html += "<h4>" + skuDetails.ITEM_NAME + "</h4>";
+                                    html += "<p><b>#" + skuDetails.SKU + "</b></p>";
+                                    html += "</div>";
+                                    html += "</div>";
+                                    html += "<p>" + skuDetails.DESCRIPTION + "</p>"
+                                }
+                                html += '<table class="table table-condensed table-striped">';
+                                html += "<thead>";
+                                html += "<tr>";
+                                html += "<th>Sku</th>";
+                                html += "<th>Availability</th>";
+                                html += '<th class="text-center">In Store</th>';
+                                html += "<th>Description</th>";
+                                html += "</tr>";
+                                html += "</thead>";
+                                html += "<tbody>";
+                                var comps = data.data.components;
+                                for (var i in comps) {
+                                    html += "<tr>";
+                                    html += "<td>" + comps[i].sku + "</td>";
+                                    html += "<td>" + comps[i].availability + "</td>";
+                                    html += '<td class="text-center">' + comps[i].in_store + "</td>";
+                                    html += "<td>" + comps[i].description + "</td>";
+                                    html += "</tr>"
+                                }
+                                html += "</tbody>";
+                                html += "</table>";
+                                shopCartUI.openModal("modal-md", "Component List", html, "componentList")
+                            }
+                        } else {
+                            noComps = true
+                        }
+                    } else {
+                        noComps = true
+                    }
+                    if (noComps) {
+                        var html = '<div class="alert alert-primary"><i class="fa fa-exclamation-triangle"></i> No Components found</div>';
+                        shopCartUI.openModal("modal-md", "Component List", html, "componentList")
+                    }
+                },
+                error: function() {
+                    var html = '<div class="alert alert-primary"><i class="fa fa-exclamation-triangle"></i> ' + "There was an error pulling up the components, please try again.</div>";
+                    shopCartUI.openModal("modal-md", "Component List", html, "componentList")
+                }
+            })
+        })
+    },
+    loadFilterView: function(filters, setFilters) {
+        var view = '<form id="filterOptions">';
+        for (var i in filters) {
+            var options = filters[i].options;
+            if (typeof filters[i].options != "undefined") {
+                view += '<label class="optionLabel">' + i + "</label>";
+                var addedSelectBox = false;
+                for (var o in options) {
+                    var obj = {
+                        name: i,
+                        selected: options[o].selected,
+                        type: filters[i].type,
+                        count: options[o].count,
+                        value: o,
+                        options: typeof filters[i].options != "undefined" ? filters[i].options : {}
+                    };
+                    if (filters[i].type == "select" && addedSelectBox === false) {
+                        if (setFilters != null && typeof setFilters[i] != "undefined") {
+                            obj.value = setFilters[i].selected[0]
+                        }
+                        view += Search.buildSelectBox(obj);
+                        addedSelectBox = true
+                    } else if (filters[i].type == "checkbox" || filters[i].type == "radio") {
+                        view += Search.buildOptionBox(obj)
+                    }
+                }
+            }
+            if (filters[i].type == "custom") {
+                for (var o in options) {
+                    selected = false;
+                    if (setFilters) {
+                        if (typeof setFilters[i] != "undefined" && setFilters[i].selected[0] == o) {
+                            selected = true
+                        }
+                    }
+                    var obj = {
+                        name: i,
+                        type: options[o].type,
+                        count: options[o].count,
+                        value: o,
+                        selected: selected
+                    };
+                    if (options[o].type != "select") {
+                        view += Search.buildOptionBox(obj)
+                    } else {
+                        view += Search.buildSelectBox(obj)
+                    }
+                }
+            }
+        }
+        view += "</form>";
+        $("#searchResultsArea #searchOptions").html(view)
+    },
+    buildSelectBox: function(obj) {
+        var view = '<select class="form-control input-sm" name="' + obj.name.toLowerCase().replace(" ", "_") + '">';
+        view += '<option value="">Any</option>';
+        for (var i in obj.options) {
+            var isSelected = obj.value == obj.options[i] ? "selected" : "";
+            view += "<option " + isSelected + ">" + obj.options[i] + "</option>"
+        }
+        view += "</select>";
+        return view
+    },
+    buildOptionBox: function(obj) {
+        var isSelected = obj.selected;
+        isSelected = isSelected ? "checked" : "";
+        var view = '<label class="' + obj.type + '">';
+        var searchCount = typeof obj.count != "undefined" ? obj.count : 0;
+        view += "<input " + isSelected + " " + 'type="' + obj.type + '" ' + 'value="' + obj.value + '" ' + 'name="' + obj.name.replace(" ", "_").toLowerCase() + '"> ' + obj.value + " (" + searchCount + ")";
+        view += "</label>";
+        return view
+    },
+    applySearchFilters: function() {
+        $("body").on("change", "#filterOptions .checkbox input, #filterOptions select", function(event) {
+            event.preventDefault();
+            $("html, body").animate({
+                scrollTop: $("#searchBody").first().offset().top - 65
+            }, 0);
+            $("#endOfResults").remove();
+            $(".cmdSearchSKU").prop("data-filters", $("#filterOptions").serialize());
+            Search.enhancedSearch(shopCartUI.currentSearch, 0, false)
+        })
+    },
+    loadMoreSearchResults: function() {
+        $(parent.window.document).scroll(function() {
+            if ($("#endOfResults").length > 0) {
+                var inView = shopCartUI.checkIfElementIsInView("#endOfResults", "50");
+                if (inView && Search.loadingResults === false) {
+                    Search.loadingResults = true;
+                    var sequence = $(".searchResultLink").length;
+                    Search.enhancedSearch(shopCartUI.currentSearch, sequence, true)
+                }
+            }
+        })
+    },
+    toggleSearchWindow: function(close) {
+        if ($("#searchResultsArea").hasClass("hide") && close !== true) {
+            Search.init();
+            $("#searchResultsArea").removeClass("hide");
+            shopCartUI.hideMainWindow()
+        } else {
+            Search.destroy();
+            $("#searchResultsArea").addClass("hide");
+            shopCartUI.showMainWindow();
+            shopCartUI.currentSearch = ""
+        }
+    }
+};

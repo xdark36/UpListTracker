@@ -40,6 +40,7 @@ import androidx.activity.viewModels
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.widget.LinearLayout
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -66,9 +67,8 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            val intent = Intent(this, PositionMonitorService::class.java)
-            intent.action = PositionMonitorService.ACTION_START
-            ContextCompat.startForegroundService(this, intent)
+            // Location permission granted - monitoring will start automatically when on store WiFi
+            Toast.makeText(this, "Location permission granted", Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(this, "Location permission is required to monitor Wi-Fi.", Toast.LENGTH_LONG).show()
         }
@@ -95,13 +95,14 @@ class MainActivity : ComponentActivity() {
             requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
         
+        // Auto-start the position monitoring service
+        startPositionMonitoringService()
+        
         // Check if monitoring should be started (don't auto-start on launch)
         val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
         val monitoringEnabled = prefs.getBoolean("monitoring_active", false)
         
-        if (monitoringEnabled) {
-            startMonitoringServiceWithPermissionCheck()
-        }
+        // Monitoring is now automatic when connected to store WiFi
         
         try {
             val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.root_layout)
@@ -110,14 +111,12 @@ class MainActivity : ComponentActivity() {
             val positionTextView = findViewById<TextView>(R.id.positionText)
             val statusText = findViewById<TextView>(R.id.statusText)
             val settingsButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.settingsButton)
-            val copyButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.copyButton)
-            val shareButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.shareButton)
             val refreshButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.refreshButton)
             val historyButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.historyButton)
             
             if (swipeRefreshLayout == null || bannerText == null || progressBar == null || 
                 positionTextView == null || statusText == null || settingsButton == null || 
-                copyButton == null || shareButton == null || refreshButton == null || historyButton == null) {
+                refreshButton == null || historyButton == null) {
                 throw Exception("One or more UI elements not found")
             }
             
@@ -146,21 +145,7 @@ class MainActivity : ComponentActivity() {
                 startActivity(Intent(this, SettingsActivity::class.java))
             }
 
-            // Copy button
-            copyButton.setOnClickListener {
-                val position = prefs.getString("last_position", "--")
-                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                val clip = android.content.ClipData.newPlainText("Position", position)
-                clipboard.setPrimaryClip(clip)
-                provideHapticFeedback()
-                Toast.makeText(this, "Position copied to clipboard", Toast.LENGTH_SHORT).show()
-            }
 
-            // Share button
-            shareButton.setOnClickListener {
-                val position = prefs.getString("last_position", "--") ?: "--"
-                sharePosition(position)
-            }
 
             // Refresh button
             refreshButton.setOnClickListener {
@@ -226,6 +211,20 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+    }
+    
+    private fun startPositionMonitoringService() {
+        try {
+            val serviceIntent = Intent(this, PositionMonitorService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+            android.util.Log.i("MainActivity", "Position monitoring service started")
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to start position monitoring service", e)
+        }
     }
 
     private fun extractPosition(html: String): String {
@@ -322,15 +321,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun startMonitoringServiceWithPermissionCheck() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && !hasLocationPermission()) {
-            requestLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        } else {
-            val intent = Intent(this, PositionMonitorService::class.java)
-            intent.action = PositionMonitorService.ACTION_START
-            ContextCompat.startForegroundService(this, intent)
-        }
-    }
+    // Monitoring is now automatic when connected to store WiFi
 
     private fun isOnStoreWifi(context: Context, storeSsid: String): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -383,9 +374,9 @@ class MainActivity : ComponentActivity() {
 
     private fun showBanner(bannerText: TextView, message: String, success: Boolean) {
         runOnUiThread {
-            val rootView = findViewById<androidx.coordinatorlayout.widget.CoordinatorLayout?>(R.id.root_layout)
-            if (rootView != null) {
-                Snackbar.make(rootView, message, Snackbar.LENGTH_LONG).show()
+            val mainLayout = findViewById<android.view.View>(R.id.mainLayout)
+            if (mainLayout != null) {
+                Snackbar.make(mainLayout, message, Snackbar.LENGTH_LONG).show()
             } else {
                 bannerText.text = message
                 bannerText.setBackgroundColor(if (success) 0xFFB9F6CA.toInt() else 0xFFFFEB3B.toInt())

@@ -1,0 +1,57 @@
+/*****************************************************
+ *****************************************************
+  FILE:             checklist.js
+  CREATION DATE:    Jun 25, 2021
+  AUTHOR:           Isaac Kissiva
+
+  MODIFICATION HISTORY:
+  06/25/21          IK     Initial Creation
+
+
+ *****************************************************
+ *****************************************************/
+
+var Checklist = {
+
+	init : function(){
+
+		$(document).ready(function(){
+			var searchBox = $('#hdnSearchBox').val();
+			var table = $('#datatables').DataTable({
+				//bJQueryUI: true,
+				bStateSave: true,
+				bProcessing: true,
+				bPaginate: true,
+				bInfo: true,
+				bDeferRender: true,
+				scrollY: "450px",
+				lengthMenu: [ [10, 25, 50, 100, 150, 200, 500, -1], [10, 25, 50, 100, 150, 200, 500, "All"] ],
+				pageLength: 10,
+				order: [[ 0, "asc" ]],
+				oSearch: {"sSearch": searchBox},
+				aoColumnDefs:
+				[
+		           {"aTargets":[0],  "width":"3%"},
+		           {"aTargets":[1],  "width":"10%", "orderData": [ 1, 0 ]},
+		           {"aTargets":[2],  "width":"5%"},
+		           {"aTargets":[3],  "width":"7%"},
+			    ],
+			    initComplete: function () {}
+			});
+		    table.draw();
+		});
+
+		$('body')
+		.on('click', '#btnclear', function(e) {
+			e.preventDefault();
+			$("option:selected").prop("selected", false);
+		})
+		.on('click', '.closeChecklists', function(e) {
+			e.preventDefault();
+			shopCartUI.showMainWindow();
+        	$('#managerChecklistArea').addClass('hide').html('');
+        	$('#footer').removeClass('hide');
+        	$('#managerItems').val('goto');
+		});
+	},
+};

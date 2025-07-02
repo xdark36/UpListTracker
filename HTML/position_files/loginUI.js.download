@@ -1,0 +1,406 @@
+
+    var loginUI = {
+
+        baseURL: "",
+        selectedHFC: false,
+        storecookie: "",
+        Initialize: function (baseUrl, SelectedHFC, errorMsg) {
+
+            window.LoginNumKeyPad=null;
+
+            try {
+                shopCartUI.disableWatchDog();
+            }catch(err){}
+
+            try{
+                shopCartUI.hideMsg();
+            }catch(err){}
+
+            $(document)
+            .add('*')
+            .off()
+            .ajaxStart(function(){
+            	$('#loadNotify').show();
+            })
+            .ajaxStop(function(){
+            	$('#loadNotify').hide();
+            });
+
+            loginUI.baseURL = baseUrl;
+            loginUI.storecookie = $.cookie("STORE");
+
+            if (arguments.length == 3 && errorMsg != null && errorMsg.trim().length > 0) {
+                loginUI.displayMsg(errorMsg, 'Login Error');
+            }
+
+            $(document).ready(
+                function () {
+                    if (location.protocol == "https:") {
+                        $('.lockcorner').show();
+                    }
+                    
+                    var el = document.createElement('div');
+                    var eventName = 'ontouchstart';
+                    var isSupported = (eventName in el);
+                    if (!isSupported) {
+                        el.setAttribute(eventName, 'return;');
+                        isSupported = typeof el[eventName] == 'function';
+                    }
+                    el = null;
+                    if (isSupported)
+                        $('#isTouchSupported').val("true");
+                    else
+                        $('#isTouchSupported').val("false");
+
+                    $("input[type=text], select, textarea").focus(function () {
+                        $("#footer").hide();
+                    });
+                    $("input[type=text], select, textarea").focusout(function () {
+                        $("#footer").show();
+                    });
+
+                    if(shopCartUI.isTouchDevice()) {
+                        shopCartUI.showNumericKeyPad('#emp_number');
+                    }
+                }
+            );
+
+            $(document).ready(function () {
+
+                $('body').delegate('#emp_number', "blur", function () {
+                	if ($('#isTouchSupported').val() != "true") {
+                		loginUI.getEnteredEmployeeNumber();
+                	}
+                })
+                .delegate('#emp_number', 'focus', function () {
+                	if ($('#isTouchSupported').val() == "true") {
+                		if (typeof window.LoginNumKeyPad != 'undefined' && window.LoginNumKeyPad!=null) {
+                            //already initialized
+                        } else {
+                        	window.LoginNumKeyPad = new NumericKeyPad('numericKeypadl', '#emp_number', 'keyup', 'touchstart', 'LoginNumKeyPad', loginUI.setEnteredEmployeeNumber, 'Enter Employee# + [Enter]','loginUI.getEnteredEmployeeNumber()');
+                        }
+                    	LoginNumKeyPad.show();
+                        $('#emp_number').blur();
+                        $('#numericKeypadl').css({'margin':'0 auto','position':'relative', 'top':'-228px', 'left':0});
+                    }
+                	$('#user_id').hide();
+                	$('#user_password').val('');
+                })
+                .delegate('#user_password', 'keypress', function (e) {
+                    if (e.which == 13) {
+                        loginUI.validate();
+                    }
+                });
+            });
+            if (!String.prototype.endsWith) {
+                Object.defineProperty(String.prototype, 'endsWith', {
+                    value: function (searchString, position) {
+                        var subjectString = this.toString();
+                        if (position === undefined || position > subjectString.length) {
+                            position = subjectString.length;
+                        }
+                        position -= searchString.length;
+                        var lastIndex = subjectString.indexOf(searchString, position);
+                        return lastIndex !== -1 && lastIndex === position;
+                    }
+                });
+            }
+        },
+
+        error: function (msg) {
+            var s = document.querySelector('#status');
+            s.innerHTML = typeof msg == 'string' ? msg : "failed";
+            s.className = 'fail';
+        },
+
+        getEnteredEmployeeNumber: function(){
+            var emp_number=$('#emp_number').val();
+    		if ( emp_number > 0 && emp_number < 1000 ){
+            	// store number entered
+            	var s = emp_number;
+            	$('#user_id').show().focus();
+                if (s.length > 0) {
+                    $('#user_id').val('');
+                    $('#user_password').val('');
+                   // loginUI.setSocketPortNumber();
+                }
+            } else if (emp_number < 0){
+            	loginUI.displayMsg('Error unable to connect to as400 db(account disabled or invalid) fix the problem and try again.');
+            	$('#emp_number').val('');
+            } else {
+            	// employee number entered
+            	$('#user_id').hide();
+            	$('#user_password').val('').focus();
+            	//loginUI.setSocketPortNumber();
+            }
+        },
+
+    validate: function () {
+        $('#hfc_notes_button').addClass('hide');
+        var store = '';
+        var user_id = '';
+        var emp_number = $('#emp_number').val();
+        var other_id = '';
+        var user = '';
+        var stmp = $('#user_password').val();
+
+        	if (emp_number == 0) {
+                loginUI.displayMsg('Error invalid login');
+                return false;
+            }
+        	
+        	if (emp_number == '') {
+                loginUI.displayMsg('Employee number must be entered first');
+                return false;
+            }
+            
+        	if (emp_number < 1000) { // assume store number
+                user_id = $('#user_id').val();
+                if (user_id == '') {
+	                loginUI.displayMsg('User ID must be entered.');
+	                return false;
+	            }
+
+                store = emp_number;
+
+                if (!isNaN(user_id) // typeof user_id = 'string', so we test that it's a number using isNaN
+                    && 999 < user_id && 99999 > user_id) {
+                    // this is an HFC with multiple store logins
+                    emp_number = user_id;
+                    user_id = '';    
+                } else {
+                    // this is a Manager login
+                    user_id = user_id.toUpperCase();
+                    emp_number = '';
+                }
+
+                if ((user_id.indexOf('VCF')!=-1 || user_id.indexOf('ASI')!=-1 || user_id.indexOf('ASH')!=-1 || user_id.indexOf('DLF')!=-1) && user_id.charAt(3) >= 0){ 
+                    // this is HOUSE login
+                    user = user_id;
+        			user_id = '5_HOUSE';
+                } else if ('' === user_id) {
+                    // this is HFC login, do nothing
+                } else { 
+                    // this is MANAGER login
+        			other_id = user_id;
+        			user_id = '-99_MANAGER';
+        		}
+        	} else {
+        		// Employee number, do nothing
+        	}
+
+            stmp = (stmp + '').trim();
+            if ($('#user_password:enabled').length > 0 && stmp == '') {
+                loginUI.displayMsg("Password must be entered");
+                return false;
+            } else if ($('#user_password:enabled').length == 0) {
+                $('#user_password').val("");
+                stmp = "";
+            }
+
+            var pform = {
+            		"store": store,
+            		"user_id" : user_id,
+            		"user" : user,
+            		"other_id" : other_id,
+            		"emp_number": emp_number, 
+            		"setpassword": stmp,
+            		'isTouchSupported':$('#isTouchSupported').val()
+    		};
+            $.ajax({
+                method:"POST",
+                dataType: 'json',
+                type: 'post',
+                url: loginUI.baseURL + "index.php/main/login",
+                data: pform,
+                success: function (data) {
+                    if(data.success) {
+                        var envUrl = data.data.url;
+                        var currentUrl = data.data.base;
+                        var redirect = loginUI.checkIfRedirect(envUrl, currentUrl);
+
+                        //THIS ISN'T NEEDED ONCE ALL USERS ARE USING 4.3.3 and UP
+                        var appendUrl = 'index.php/login/user_login/'; // OLDER VERSIONS USE THE LOGIN CONTROLLER
+                        if(typeof data.data.non_legacy != 'undefined' && data.data.non_legacy == true) {
+                            //THIS ISNT NEEDED ONCE ALL USERS ARE USING 4.3.3 and UP
+                            appendUrl = 'index.php/main/login/'; // NEW VERSIONS DON'T
+                        }
+
+                        if(envUrl && redirect) {
+                            envUrlLogin = envUrl+appendUrl;
+                            shopCartUI.Loading_On();
+                            $('#redirectNotify').show();
+
+                            $.ajax({
+                                type: 'get',
+                                url: envUrlLogin,
+                                data: pform,
+                                dataType: 'json',
+                                crossDomain: true,
+                                success: function (data) {
+                                   $.post(shopCartUI.baseURL + 'index.php/main/logout', function() {});
+                                   if(typeof data.data != 'undefined' && typeof data.data.session_id != 'undefined') {
+                                       window.location.href = envUrl+'?sess='+data.data.session_id;
+                                   } else {
+                                       window.location.href = envUrl;
+                                   }
+                                },
+                                error: function (error) {
+                                    if (error.status != 200 || error.statusText == 'fail') {
+                                        shopCartUI.displayMsg('Something went wrong, try again!', 'Error');
+                                    } else {
+                                        $.post(shopCartUI.baseURL + 'index.php/main/logout', function() {});
+                                        window.location.href = envUrl;
+                                    }
+                                }
+                            });
+                        } else {
+                            window.location.href = currentUrl;
+                        }
+                    } else {
+                        shopCartUI.handleFailedAjaxCall(data);
+                    }
+                },
+                error: function (jqXHR, status, errorThrown) {
+                    var d = jqXHR.responseText;
+                    if (typeof d.length != 'undefined' && d.length > 0) {
+                        eval('d='+d);
+                        if (typeof d[0].error != 'undefined') {
+                            $('#loadNotify').hide();
+                            $(".btn").html('Submit');
+                            loginUI.displayMsg(d[0].error);
+                        }
+                    }
+                }
+            })
+
+            return false;
+        },
+        
+    setEnteredEmployeeNumber: function (emp_number) {
+        $('#emp_number').val(emp_number.trim());
+        if ( emp_number > 0 && emp_number < 1000 ){
+            // Store number entered
+            var s = emp_number;
+            $('#user_id').show().focus();
+            if (s.length > 0) {
+                $('#user_id').val('');
+                $('#user_password').val('');
+            }
+        } else {
+            // Employee number entered
+            $('#user_id').hide();
+        }
+    },
+
+    displayMsg: function (msg, title) {
+        if(typeof title == 'undefined' || title == '') {
+            title = 'Error:';
+        }
+        shopCartUI.openModal('modal-md', title, msg);
+    },
+
+    checkIfRedirect: function(redirectUrl, currentUrl) {
+        if(redirectUrl && currentUrl) {
+            if(redirectUrl && currentUrl) {
+                if(redirectUrl == currentUrl) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    },
+
+    checkIfNeedsReload: function () {
+        $.post(window.location.href + 'networktest.php',
+            function (data) {
+                if (!(data.length > 0 && data.indexOf('NETWORK CONNECTION WORKS') > -1)) {
+                    location.reload();
+                }
+            }).fail(function () {
+                location.reload();
+            });
+    },
+
+    checkIfNetworkError: function (callbackfunction, errormsg) {
+        var msg = 'Error network connection error try again later';
+        if (arguments.length > 1) {
+            msg = errormsg;
+        }
+        var url = window.location.reload();
+        $.post(url.replace("#", "") + 'networktest.php', function (data) {
+            var stat = false;
+            if (arguments.length > 0) {
+                if (data.length > 0 && data.indexOf('NETWORK CONNECTION WORKS') > -1) {
+                    stat = true;
+
+                    if (arguments.length > 0) {
+                        if (callbackfunction != null) {
+                            if (typeof(callbackfunction) == "function") {
+                                try {
+                                    callbackfunction();
+                                } catch (err) {
+                                    loginUI.displayMsg("Unable to finish task", 'Error:');
+                                }
+                            } else if (typeof(callbackfunction) == "string") {
+                                try {
+                                    eval(callbackfunction);
+                                } catch (err) {
+                                    loginUI.displayMsg("Unable to finish task", 'Error:');
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (!stat) {
+                loginUI.displayMsg(msg, 'Error:');
+            }
+        }).fail(function () {
+            loginUI.displayMsg(msg, 'Error:');
+        });
+    },
+
+    hasErrorMessages: function (data) {
+        var d = '';
+        var data2 = data
+        var i = data.indexOf('~#*#~');
+        if (i >= 0) {
+            location.reload();
+            return;
+        }
+        i = data.indexOf('[{error:');
+        if (i == 0) {
+            i = data.indexOf('}]');
+            try {
+                eval('d=' + data.substring(0, i + 2) + ';');
+            } catch (err) {
+            }
+            if (typeof d[0] != 'undefined'
+                && typeof d[0].error != 'undefined') {
+                loginUI.displayMsg(d[0].error);
+            }
+            data2 = data.substring(i + 2);
+            i = data2.indexOf('[{error:');
+            while (i > -1) {
+                if (i == 0) {
+                    i = data2.indexOf('}]');
+                    try {
+                        eval('d=' + data2.substring(0, i + 2) + ';');
+                    } catch (err) {
+                    }
+                    if (typeof d[0] != 'undefined'
+                        && typeof d[0].error != 'undefined') {
+                        loginUI.displayMsg(d[0].error);
+                    }
+                    data2 = data2.substring(i + 2);
+                    i = data2.indexOf('[{error:');
+                } else {
+                    i = -1;
+                }
+            }
+        }
+        return data2;
+    }
+};

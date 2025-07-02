@@ -1,0 +1,178 @@
+
+var faddr_integration = {
+    processValidation: function (x) {
+        if (x) {
+            // Return object to control form submission [optional]
+            var formResult = {
+                passedValidation: false, // default false, prevent form submission
+                responseObj: x.getResponse(), // Store FreshAddress response 
+                userMessage1: "", // store message to user 
+                userMessage2: "", // store message to user
+                internalComment: "" // internal comments to pass in POST or for logging purposes.
+            };
+
+            /* 
+            * ERROR HANDLING: FreshAddress recommends that an email is let through in case of an error. 
+            */
+            if (x.isServiceError()) {
+                formResult.passedValidation = true;
+                formResult.internalComment = 'Service Error: ' + formResult.responseObj.ERROR;
+                faddr_debug.logResult("Result: Service error - " + formResult.responseObj.ERROR);
+                return formResult;
+            }
+
+            /* OPTIONAL: Check of email is found in cache */
+            faddr_debug.logResult("x.isCachedResponse(): " + x.isCachedResponse());
+            faddr_debug.logResult("x.getCachedAttemptNumber(): " + x.getCachedAttemptNumber());
+
+            /*
+            *   VALID RESULT.  Check FINDING field value.
+            */
+            if (x.isValid()) {
+                /* Check comment and/or comment_code */
+                if (x.isSafeToSend()) {
+                    formResult.passedValidation = true;
+                    formResult.internalComment = 'valid SafeToSend';
+                    faddr_debug.logResult("Result: valid SafeToSend");
+                    return formResult;
+                }
+                else {
+                    /* Check if is suggestion available */
+                    if (x.hasSuggest() && x.getCachedAttemptNumber() < 2) {
+                        // Valid, with Suggestion
+                        // Provide opportunity for user to correct.
+                        formResult.userMessage1 = "We may have detected a typo.";
+                        formResult.userMessage2 = "- Did you mean to type " + x.getSuggEmail() + "?";
+                        formResult.internalComment = "valid with suggestion";
+                        faddr_debug.logResult("Result: valid with suggestion");
+                        return formResult;
+                    }
+                    else {
+                        // Valid, No Suggestion
+                        formResult.passedValidation = true;
+                        formResult.internalComment = "valid no suggestion";
+
+                        // Check override
+                        if (x.isOverride()) {
+                            formResult.internalComment = "Customer override - " + formResult.internalComment;
+                            faddr_debug.logResult("Result: isOverride: " + x.isOverride());
+                        }
+                        else {
+                            faddr_debug.logResult("Result: isOverride = " + x.isOverride());
+                        }
+                        return formResult;
+                    }
+                }
+            }
+            else if (x.isError() || x.isWarning()) {
+                /* 
+                *   INVALID RESULT
+                */
+                /* Check for Suggestion */
+                if (x.hasSuggest()) {
+                    // Set response message. Provide opportunity for user to correct.
+                    formResult.userMessage1 = x.getErrorResponse() + ".";
+                    formResult.userMessage2 = "- Did you mean to type " + x.getSuggEmail() + "?";
+                    formResult.internalComment = "invalid with suggestion";
+                    faddr_debug.logResult("Result: invalid with suggestion - " + x.getComment());
+                    return formResult;
+                }
+                else {
+                    // Set response message.
+                    formResult.userMessage1 = "Please check your typing.";
+                    formResult.userMessage2 = x.getErrorResponse() + ".";
+                    formResult.internalComment = "invalid no suggestion";
+                    faddr_debug.logResult("Result: invalid with no suggestion - " + x.getComment());
+                    return formResult;
+                }
+            }
+            else {
+                // Error Condition 2 - the service should always response with finding E/W/V
+                formResult.passedValidation = true;
+                formResult.internalComment = "Error: " + formResult.responseObj.ERROR;
+                faddr_debug.logResult("Result: Error - " + formResult.responseObj.ERROR);
+                return formResult;
+            }
+        }
+        else {
+            // Error Condition 1 - the service should always response with yes/no
+            formResult.passedValidation = true;
+            formResult.internalComment = "Error: " + formResult.responseObj.ERROR;
+            faddr_debug.logResult("Result: Error - " + formResult.responseObj.ERROR);
+            return formResult;
+        }
+        return;
+    },
+
+	verifyEmail: function () {
+	
+	    var email = $(this).val().trim().toUpperCase();
+	    var options = { role: false, emps: false, rtc_timeout: 1200, atc: 'c' };
+	    var emailbox = $(this).attr('id');
+	    
+	    if (email!=''){
+		    $('#'+emailbox).addClass('ui-autocomplete-loading');
+		    if (email!='*NONE' && !ShopdataUI.ValidEmail(email)){
+		    	$('#'+emailbox+'_Invalid').show();
+				$('#'+emailbox).addClass('profileInvalid');
+		    	$('#'+emailbox).removeClass('ui-autocomplete-loading');
+		    } else {
+		    	shopCartUI.checkIfNetworkError(
+		    			function(){
+		    		    	$.ajax({   
+		    			        type: "POST",
+		    			        url: ShopdataUI.baseURL+'index.php/main/ShopData_CheckEmailInDB',   
+		    			        data: {email:email},
+		    			        dataType: 'json',
+		    			        success: function(data) {
+		    						if (data.OCCURRENCE != 0){
+		    							$('#'+emailbox+'_Invalid').hide();
+		    							$('#'+emailbox).removeClass('profileInvalid');
+		    							$('#'+emailbox).removeClass('ui-autocomplete-loading');
+		    						} else {
+		    							FreshAddress.validateEmail(email, options).then(function (x) {
+		    								var formResult = faddr_integration.processValidation(x);
+		    						        faddr_debug.logResult(formResult);
+		    						        if (!formResult.passedValidation) {
+		    									$('#'+emailbox+'_Invalid').show();
+		    									$('#'+emailbox).addClass('profileInvalid');
+		    						            faddr_debug.showRawResponse(null, formResult.responseObj);
+		    						        } else {
+		    							    	$('#'+emailbox+'_Invalid').hide();
+		    									$('#'+emailbox).removeClass('profileInvalid');
+		    						        }
+		    						        $('#'+emailbox).removeClass('ui-autocomplete-loading');
+		    						    });
+		    						}
+		    		            },
+		    				    error: function (data){
+		    				    	$('#'+emailbox).removeClass('ui-autocomplete-loading');
+		    			        }  
+		    			    });
+		    			},
+		    			'Unable to validate email now network disconnected'
+    			);
+		    }
+	    }
+	}
+}
+
+var faddr_debug = {
+    isEnabled: false,
+    showRawResponse: function (src, response) { // Format Raw Response to Display (Debugging purposes only)
+        if (faddr_debug.isEnabled) {
+            if (src) {
+                var rawResults = src + "<br/><br/>" + JSON.stringify(response, null, '\t');
+            }
+            else {
+                var rawResults = JSON.stringify(response, null, '\t');
+            }
+            $("#freshaddress_breakdown").html('<p id="faddr_rawResponse">' + rawResults + '</p>');
+        } 
+    },
+    logResult: function (msg) {
+        if (faddr_debug.isEnabled) {
+            console.log(msg);
+        }
+    }
+}

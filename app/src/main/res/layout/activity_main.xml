@@ -23,8 +23,7 @@
             android:padding="4dp"
             android:textColor="@color/status_active"
             android:drawableLeft="@drawable/ic_check_circle"
-            android:drawablePadding="8dp"
-            android:contentDescription="Monitoring status" />
+            android:drawablePadding="8dp" />
 
         <TextView
             android:id="@+id/bannerText"
@@ -36,60 +35,26 @@
             android:padding="8dp"
             android:visibility="gone"
             android:background="@color/banner_bg"
-            android:textColor="@color/banner_text"
-            android:contentDescription="Status banner" />
+            android:textColor="@color/banner_text" />
 
         <ProgressBar
             android:id="@+id/progressBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="gone"
-            style="?android:attr/progressBarStyleLarge"
-            android:contentDescription="Loading spinner" />
+            style="?android:attr/progressBarStyleLarge" />
 
-        <LinearLayout
+        <TextView
+            android:id="@+id/positionText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:text="Loading…"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:background="@color/banner_bg"
+            android:textColor="@color/position_text"
             android:gravity="center"
-            android:padding="24dp">
-
-            <TextView
-                android:id="@+id/positionText"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Loading…"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:background="@color/banner_bg"
-                android:textColor="@color/position_text"
-                android:gravity="center"
-                android:contentDescription="Current position value" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/copyButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="Copy"
-                android:icon="@drawable/ic_copy"
-                app:iconPadding="4dp"
-                android:contentDescription="Copy position to clipboard"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/shareButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="Share"
-                android:icon="@drawable/ic_share"
-                app:iconPadding="4dp"
-                android:contentDescription="Share position"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
-
-        </LinearLayout>
+            android:padding="24dp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -106,7 +71,6 @@
                 android:text="Refresh Position"
                 android:icon="@drawable/ic_refresh"
                 app:iconPadding="8dp"
-                android:contentDescription="Refresh position manually"
                 style="@style/Widget.MaterialComponents.Button" />
 
         </LinearLayout>
@@ -127,7 +91,6 @@
                 android:text="Settings"
                 android:icon="@drawable/ic_settings"
                 app:iconPadding="8dp"
-                android:contentDescription="Open settings"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
             <com.google.android.material.button.MaterialButton
@@ -139,7 +102,6 @@
                 android:text="History"
                 android:icon="@drawable/ic_refresh"
                 app:iconPadding="8dp"
-                android:contentDescription="View position history"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
         </LinearLayout>

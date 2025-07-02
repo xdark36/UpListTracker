@@ -37,30 +37,9 @@ class PositionMonitorService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 100
         private const val CHANNEL_ID = "position_monitor"
-        const val ACTION_START = "com.example.uplisttracker.action.START"
-        const val ACTION_STOP  = "com.example.uplisttracker.action.STOP"
-        const val ACTION_PAUSE = "com.example.uplisttracker.action.PAUSE"
         const val ACTION_REFRESH = "com.example.uplisttracker.action.REFRESH"
         private const val ALERT_CHANNEL_ID = "up_chan"
         private const val POSITION_SELECTOR = "#position-element"
-        
-        fun startMonitoring(context: Context) {
-            val intent = Intent(context, PositionMonitorService::class.java).apply {
-                action = ACTION_START
-            }
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
-        }
-        
-        fun stopMonitoring(context: Context) {
-            val intent = Intent(context, PositionMonitorService::class.java).apply {
-                action = ACTION_STOP
-            }
-            context.startService(intent)
-        }
     }
 
     override fun onCreate() {
@@ -88,11 +67,14 @@ class PositionMonitorService : Service() {
             val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             networkCallback = object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
-                    Timber.i("Network available, resuming monitoring")
+                    Timber.i("Network available, checking if on store WiFi")
                     val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
                     val storeSsid = prefs.getString("ssid", "Sales") ?: "Sales"
                     if (isOnStoreWifi(this@PositionMonitorService, storeSsid)) {
-                        if (isMonitoring) {
+                        Timber.i("Connected to store WiFi, starting monitoring")
+                        if (!isMonitoring) {
+                            startForegroundMonitoring()
+                        } else {
                             scope.launch { checkPositionChange(getUrlFromPrefs()) }
                         }
                     } else {
@@ -109,6 +91,16 @@ class PositionMonitorService : Service() {
                     val hasWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
                     val hasInternet = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                     Timber.d("Network capabilities changed - WiFi: $hasWifi, Internet: $hasInternet")
+                    
+                    // Check if we should start monitoring when WiFi capabilities change
+                    if (hasWifi && hasInternet) {
+                        val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
+                        val storeSsid = prefs.getString("ssid", "Sales") ?: "Sales"
+                        if (isOnStoreWifi(this@PositionMonitorService, storeSsid) && !isMonitoring) {
+                            Timber.i("Store WiFi detected, starting monitoring")
+                            startForegroundMonitoring()
+                        }
+                    }
                 }
             }
             
@@ -123,27 +115,17 @@ class PositionMonitorService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return when (intent?.action) {
-            ACTION_START -> {
+            ACTION_REFRESH -> {
+                scope.launch { checkPositionChange(getUrlFromPrefs()) }
+                START_STICKY
+            }
+            else -> {
+                // Always start monitoring when service is created
                 if (!isMonitoring) {
                     startForegroundMonitoring()
                 }
                 START_STICKY
             }
-            ACTION_STOP -> {
-                isMonitoring = false
-                stopSelf()
-                START_NOT_STICKY
-            }
-            ACTION_PAUSE -> {
-                isMonitoring = false
-                showPausedNotification()
-                START_NOT_STICKY
-            }
-            ACTION_REFRESH -> {
-                scope.launch { checkPositionChange(getUrlFromPrefs()) }
-                START_STICKY
-            }
-            else -> START_NOT_STICKY
         }
     }
 
@@ -155,10 +137,9 @@ class PositionMonitorService : Service() {
             while (isActive && isMonitoring) {
                 try {
                     val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
-                    val url = prefs.getString("url", "https://selling.vcfcorp.com/") ?: "https://selling.vcfcorp.com/"
+                    val url = prefs.getString("url", "https://selling.vcfcorp.com/position") ?: "https://selling.vcfcorp.com/position"
                     val ssid = prefs.getString("ssid", "Sales") ?: "Sales"
-                    val intervalMin = prefs.getInt("polling_interval_min", 1)
-                    val pollingIntervalMs = intervalMin * 60_000L
+                    val pollingIntervalMs = 15_000L // 15 seconds
                     
                     if (isOnStoreWifi(applicationContext, ssid)) {
                         checkPositionChange(url)
@@ -169,7 +150,7 @@ class PositionMonitorService : Service() {
                     delay(pollingIntervalMs)
                 } catch (e: Exception) {
                     Timber.e(e, "Error in monitoring loop")
-                    delay(60_000) // fallback delay
+                    delay(15_000) // fallback delay
                 }
             }
         }
@@ -278,15 +259,10 @@ class PositionMonitorService : Service() {
         val intent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
         
-        val restartIntent = Intent(this, PositionMonitorService::class.java).apply {
+        val refreshIntent = Intent(this, PositionMonitorService::class.java).apply {
             action = ACTION_REFRESH
         }
-        val restartPendingIntent = PendingIntent.getService(this, 1, restartIntent, PendingIntent.FLAG_IMMUTABLE)
-        
-        val stopIntent = Intent(this, PositionMonitorService::class.java).apply {
-            action = ACTION_STOP
-        }
-        val stopPendingIntent = PendingIntent.getService(this, 2, stopIntent, PendingIntent.FLAG_IMMUTABLE)
+        val refreshPendingIntent = PendingIntent.getService(this, 1, refreshIntent, PendingIntent.FLAG_IMMUTABLE)
         
         val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
         val lastPosition = prefs.getString("last_position", "--")
@@ -297,26 +273,9 @@ class PositionMonitorService : Service() {
             .setContentText("Current: $lastPosition • Last checked: $lastChecked")
             .setSmallIcon(R.drawable.ic_check_circle)
             .setContentIntent(pendingIntent)
-            .addAction(R.drawable.ic_refresh, "Restart", restartPendingIntent)
-            .addAction(R.drawable.ic_stop_circle, "Stop", stopPendingIntent)
+            .addAction(R.drawable.ic_refresh, "Refresh Now", refreshPendingIntent)
             .setOngoing(true)
             .build()
-    }
-
-    private fun showPausedNotification() {
-        val resumeIntent = PendingIntent.getService(this, 3, Intent(this, PositionMonitorService::class.java).apply {
-            action = ACTION_START
-        }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val notif = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Position Monitor")
-            .setContentText("Monitoring paused")
-            .setSmallIcon(R.drawable.ic_pause_circle)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(false)
-            .addAction(R.drawable.ic_play_arrow, "Resume", resumeIntent)
-            .build()
-        val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        mgr.notify(NOTIFICATION_ID, notif)
     }
 
     private fun getUrlFromPrefs(): String {

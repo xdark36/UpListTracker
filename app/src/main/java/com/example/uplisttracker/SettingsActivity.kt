@@ -22,6 +22,8 @@ class SettingsActivity : AppCompatActivity() {
         layout.orientation = android.widget.LinearLayout.VERTICAL
         layout.setPadding(32, 32, 32, 32)
         
+        val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
+        
         // Store Wi-Fi SSID Input
         val ssidLabel = TextView(this)
         ssidLabel.text = "Store Wi-Fi SSID:"
@@ -78,48 +80,19 @@ class SettingsActivity : AppCompatActivity() {
         urlInput.setPadding(0, 8, 0, 16)
         layout.addView(urlInput)
         
-        // Monitoring Toggle
+        // Monitoring Info
         val monitoringLabel = TextView(this)
         monitoringLabel.text = "Real-time Monitoring:"
         monitoringLabel.textSize = 16f
         layout.addView(monitoringLabel)
         
-        val monitoringSwitch = SwitchCompat(this)
-        monitoringSwitch.text = "Enable continuous monitoring"
-        monitoringSwitch.setPadding(0, 8, 0, 16)
-        layout.addView(monitoringSwitch)
-        
-        // Polling Interval Picker
-        val intervalLabel = TextView(this)
-        intervalLabel.text = "Polling Interval (minutes):"
-        intervalLabel.textSize = 16f
-        layout.addView(intervalLabel)
-
-        val intervalPicker = NumberPicker(this)
-        intervalPicker.minValue = 1
-        intervalPicker.maxValue = 15
-        val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
-        val savedInterval = prefs.getInt("polling_interval_min", 1)
-        intervalPicker.value = savedInterval
-        layout.addView(intervalPicker)
-        
-        // Add a label to show the current interval value
-        val intervalValueLabel = TextView(this)
-        intervalValueLabel.text = "Current: ${savedInterval} minute${if (savedInterval > 1) "s" else ""}"
-        intervalValueLabel.textSize = 14f
-        intervalValueLabel.setPadding(0, 8, 0, 16)
-        layout.addView(intervalValueLabel)
-        
-        // Update the label when picker value changes
-        intervalPicker.setOnValueChangedListener { _, _, newVal ->
-            intervalValueLabel.text = "Current: $newVal minute${if (newVal > 1) "s" else ""}"
-        }
-        
-        // Auto-start toggle
-        val autoStartToggle = SwitchCompat(this)
-        autoStartToggle.text = "Auto-start on boot"
-        autoStartToggle.setPadding(0, 8, 0, 16)
-        layout.addView(autoStartToggle)
+        // Continuous monitoring is always enabled when on store WiFi
+        val monitoringInfo = TextView(this)
+        monitoringInfo.text = "Continuous monitoring will automatically start when connected to store WiFi"
+        monitoringInfo.textSize = 14f
+        monitoringInfo.setPadding(0, 8, 0, 16)
+        monitoringInfo.setTextColor(0xFF666666.toInt())
+        layout.addView(monitoringInfo)
         
         // Show current Wi-Fi SSID
         val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
@@ -188,25 +161,15 @@ class SettingsActivity : AppCompatActivity() {
         loginUrlInput.setText(prefs.getString("login_url", "https://selling1.vcfcorp.com/"))
         empNumberInput.setText(prefs.getString("emp_number", "90045"))
         passwordInput.setText(prefs.getString("user_password", "03"))
-        val defaultUrl = "https://selling1.vcfcorp.com/position"
+        val defaultUrl = "https://selling.vcfcorp.com/position"
         urlInput.setText(prefs.getString("url", defaultUrl))
         
-        // Check if monitoring is currently active
-        val isMonitoringActive = prefs.getBoolean("monitoring_active", false)
-        monitoringSwitch.isChecked = isMonitoringActive
-        
-        // Auto-start toggle
-        autoStartToggle.isChecked = prefs.getBoolean("auto_start_on_boot", false)
-
         saveButton.setOnClickListener {
             val ssid = ssidInput.text.toString()
             val loginUrl = loginUrlInput.text.toString()
             val empNumber = empNumberInput.text.toString()
             val password = passwordInput.text.toString()
             val url = urlInput.text.toString()
-            val monitoringEnabled = monitoringSwitch.isChecked
-            val pollingIntervalMin = intervalPicker.value
-            val autoStart = autoStartToggle.isChecked
             
             prefs.edit()
                 .putString("ssid", ssid)
@@ -214,18 +177,7 @@ class SettingsActivity : AppCompatActivity() {
                 .putString("emp_number", empNumber)
                 .putString("user_password", password)
                 .putString("url", url)
-                .putBoolean("monitoring_active", monitoringEnabled)
-                .putInt("polling_interval_min", pollingIntervalMin)
-                .putBoolean("auto_start_on_boot", autoStart)
                 .apply()
-            
-            // Start or stop monitoring based on toggle
-            val serviceIntent = Intent(this, PositionMonitorService::class.java)
-            if (monitoringEnabled) {
-                ContextCompat.startForegroundService(this, serviceIntent)
-            } else {
-                stopService(serviceIntent)
-            }
             
             Toast.makeText(this, "Settings saved!", Toast.LENGTH_SHORT).show()
             finish()
@@ -254,29 +206,40 @@ class SettingsActivity : AppCompatActivity() {
         // Run test in background
         Thread {
             try {
+                android.util.Log.d("SettingsActivity", "Testing login with URL: $loginUrl, Emp: $empNumber")
+                
                 // Test login
                 val loginSuccess = PositionUtils.loginAndCacheSession(this, loginUrl, empNumber, userPassword)
                 if (!loginSuccess) {
+                    android.util.Log.e("SettingsActivity", "Login failed - no cookies received or unsuccessful response")
                     runOnUiThread {
-                        Toast.makeText(this, "Login failed - check credentials", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "Login failed - check credentials and URL", Toast.LENGTH_LONG).show()
                     }
                     return@Thread
                 }
+                
+                android.util.Log.d("SettingsActivity", "Login successful, testing position fetch with URL: $positionUrl")
                 
                 // Test position fetch
                 val response = PositionUtils.makeAuthenticatedRequest(this, positionUrl)
                 if (response?.isSuccessful == true) {
                     val html = response.body?.string() ?: ""
+                    android.util.Log.d("SettingsActivity", "Position response received, length: ${html.length}")
                     val position = PositionUtils.extractPosition(html)
+                    android.util.Log.d("SettingsActivity", "Extracted position: $position")
                     runOnUiThread {
                         Toast.makeText(this, "Connection successful! Position: $position", Toast.LENGTH_LONG).show()
                     }
                 } else {
+                    val errorCode = response?.code ?: "unknown"
+                    val errorBody = response?.body?.string() ?: "no body"
+                    android.util.Log.e("SettingsActivity", "Position fetch failed - HTTP $errorCode, Body: $errorBody")
                     runOnUiThread {
-                        Toast.makeText(this, "Position fetch failed - check URL", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "Position fetch failed - HTTP $errorCode", Toast.LENGTH_LONG).show()
                     }
                 }
             } catch (e: Exception) {
+                android.util.Log.e("SettingsActivity", "Test connection exception", e)
                 runOnUiThread {
                     Toast.makeText(this, "Test failed: ${e.message}", Toast.LENGTH_LONG).show()
                 }

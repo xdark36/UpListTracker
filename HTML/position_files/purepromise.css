@@ -1,0 +1,85 @@
+#managerRebatesArea table {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 0px solid #f00;
+    margin: 0px;
+    padding: 0px;
+    font-size:  20px !important;
+    border-collapse: collapse;
+}
+
+#managerRebatesArea tbody {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 0px solid #f00;
+    margin: 0px;
+    padding: 0px;
+}
+
+#managerRebatesArea th {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 0px solid #f00;
+    margin: 0px;
+    padding: 5px;
+    font-size:  20px !important;
+}
+
+#managerRebatesArea tr {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 0px solid #f00;
+    margin: 0px;
+    padding: 0px;
+    font-size:  20px !important;
+    border-bottom: 1pt solid black;
+    border-bottom-color: #fff;
+}
+
+#managerRebatesArea td {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 0px solid #f00;
+    margin: 0px;
+    padding: 5px;
+    font-size:  20px !important;
+}
+
+#managerRebatesArea {
+    margin: 0 10px 0 10px !important; 
+}
+
+#managerRebatesArea thead {
+    font-size:  20px !important;
+}
+
+#managerRebatesArea label {
+    font-size:  20px !important;
+}
+
+#datatables a {
+    color:  blue !important;
+    text-decoration: none;
+}
+
+.activeRebate {
+    color: #000000;
+    background-color: #a3d977;
+}
+
+.expiredRebate {
+    color: #000000;
+    background-color: #E5E4E2;
+}
+
+.aboutToExpireRebate {
+    color: #000000;
+    background-color: #FFD580;
+}
+
+#tblRebatesReport {
+    font-size:  20px !important;
+}
+
+#tblRebatesList {
+    font-size:  18px !important;
+}
+
+.rebate-details {
+    cursor: pointer;
+}

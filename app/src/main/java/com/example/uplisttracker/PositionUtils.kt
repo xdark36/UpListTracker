@@ -18,16 +18,85 @@ object PositionUtils {
     private const val PREFS_NAME = "up_prefs"
     private const val COOKIE_VALID_DURATION = 30 * 60 * 1000L // 30 minutes
 
+    private fun safeLog(tag: String, msg: String) {
+        try {
+            android.util.Log.d(tag, msg)
+        } catch (_: Throwable) {
+            // Ignore in unit tests
+        }
+    }
+
     /**
      * Extracts position value from HTML content
      * @param html The HTML content to parse
      * @return The position value or "--" if not found
      */
     fun extractPosition(html: String): String {
-        val positionSelector = "#position-element"
         val doc = Jsoup.parse(html)
-        val positionElement = doc.selectFirst(positionSelector)
-        return positionElement?.text() ?: "--"
+        val bodyText = doc.body()?.text() ?: ""
+        
+        // Try multiple possible selectors for position
+        val possibleSelectors = listOf(
+            "#btnSalesUpStatus",
+            "#position-element",
+            ".position",
+            "#position",
+            "[data-position]",
+            "span:contains(Position)",
+            "div:contains(Position)",
+            "td:contains(Position)"
+        )
+        
+        val positionPatterns = listOf(
+            Regex("Position\\s*#\\s*(\\d+)", RegexOption.IGNORE_CASE),
+            Regex("Position:\\s*([^\\s]+)", RegexOption.IGNORE_CASE),
+            Regex("Current Position:\\s*([^\\s]+)", RegexOption.IGNORE_CASE),
+            Regex("Your Position:\\s*([^\\s]+)", RegexOption.IGNORE_CASE)
+        )
+        
+        for (selector in possibleSelectors) {
+            try {
+                val element = doc.selectFirst(selector)
+                if (element != null) {
+                    val text = element.text().trim()
+                    if (text.isEmpty()) {
+                        return ""
+                    }
+                    if (selector.contains(":contains(Position)")) {
+                        // Only return if text matches a position pattern
+                        for (pattern in positionPatterns) {
+                            val match = pattern.find(text)
+                            if (match != null) {
+                                val position = match.groupValues[1].trim()
+                                safeLog("PositionUtils", "Found position with pattern in selector '$selector': $position")
+                                return position
+                            }
+                        }
+                        continue
+                    } else if (text != "Position") {
+                        safeLog("PositionUtils", "Found position with selector '$selector': $text")
+                        return text
+                    }
+                }
+            } catch (e: Exception) {
+                safeLog("PositionUtils", "Selector '$selector' failed: ${e.message}")
+            }
+        }
+        
+        // If no specific element found, look for position-like text in the entire document
+        safeLog("PositionUtils", "Full page text length: ${bodyText.length}")
+        safeLog("PositionUtils", "Page contains 'position': ${bodyText.contains("position", ignoreCase = true)}")
+        
+        for (pattern in positionPatterns) {
+            val match = pattern.find(bodyText)
+            if (match != null) {
+                val position = match.groupValues[1].trim()
+                safeLog("PositionUtils", "Found position with pattern: $position")
+                return position
+            }
+        }
+        safeLog("PositionUtils", "No position found in HTML")
+        return "--"
     }
 
     fun getOkHttpClient(): OkHttpClient {
@@ -71,22 +140,89 @@ object PositionUtils {
 
     fun loginAndCacheSession(context: Context, loginUrl: String, empNumber: String, userPassword: String): Boolean {
         val client = getOkHttpClient()
-        val loginRequestBody = FormBody.Builder()
-            .add("emp_number", empNumber)
-            .add("user_password", userPassword)
-            .build()
-        val loginRequest = Request.Builder()
+        
+        // First, try to get the login page to see if there are any CSRF tokens or other required fields
+        val getRequest = Request.Builder()
             .url(loginUrl)
-            .post(loginRequestBody)
+            .get()
             .build()
-        client.newCall(loginRequest).execute().use { response ->
-            val cookies = response.headers("Set-Cookie")
-            val success = cookies.isNotEmpty() && response.isSuccessful
-            if (success) {
-                cacheSessionCookie(context, cookies)
+        
+        safeLog("PositionUtils", "Attempting login to: $loginUrl")
+        safeLog("PositionUtils", "Employee number: $empNumber")
+        
+        // Get the login page first
+        var sessionCookies = mutableListOf<String>()
+        client.newCall(getRequest).execute().use { getResponse ->
+            if (getResponse.isSuccessful) {
+                sessionCookies.addAll(getResponse.headers("Set-Cookie"))
+                safeLog("PositionUtils", "Got login page, session cookies: ${sessionCookies.size}")
             }
-            return success
         }
+        
+        // Try different form field names that might be used
+        val possibleFieldNames = listOf(
+            "emp_number" to "user_password",
+            "username" to "password", 
+            "user" to "pass",
+            "employee_number" to "password",
+            "emp" to "pwd"
+        )
+        
+        for ((userField, passField) in possibleFieldNames) {
+            safeLog("PositionUtils", "Trying login with fields: $userField, $passField")
+            
+            val loginRequestBody = FormBody.Builder()
+                .add(userField, empNumber)
+                .add(passField, userPassword)
+                .build()
+            
+            val loginRequest = Request.Builder()
+                .url(loginUrl)
+                .post(loginRequestBody)
+                .apply {
+                    // Add any session cookies we got from the GET request
+                    if (sessionCookies.isNotEmpty()) {
+                        addHeader("Cookie", sessionCookies.joinToString("; "))
+                    }
+                }
+                .build()
+            
+            client.newCall(loginRequest).execute().use { response ->
+                val cookies = response.headers("Set-Cookie")
+                val responseBody = response.body?.string() ?: ""
+                val success = cookies.isNotEmpty() && response.isSuccessful
+                
+                safeLog("PositionUtils", "Login response code: ${response.code}")
+                safeLog("PositionUtils", "Cookies received: ${cookies.size}")
+                safeLog("PositionUtils", "Response successful: ${response.isSuccessful}")
+                safeLog("PositionUtils", "Response body length: ${responseBody.length}")
+                
+                // Check if login was successful by looking for common success indicators
+                val isLoginSuccess = responseBody.contains("logout", ignoreCase = true) || 
+                                   responseBody.contains("welcome", ignoreCase = true) ||
+                                   responseBody.contains("dashboard", ignoreCase = true) ||
+                                   responseBody.contains("menu", ignoreCase = true) ||
+                                   !responseBody.contains("login", ignoreCase = true) ||
+                                   response.code == 302 // Redirect after successful login
+                
+                safeLog("PositionUtils", "Login success indicators: $isLoginSuccess")
+                
+                if (success || (response.isSuccessful && isLoginSuccess)) {
+                    if (cookies.isNotEmpty()) {
+                        cacheSessionCookie(context, cookies)
+                        safeLog("PositionUtils", "Session cached successfully with fields: $userField, $passField")
+                    } else {
+                        safeLog("PositionUtils", "Login appears successful but no cookies - may use different auth method")
+                    }
+                    return true
+                } else {
+                    safeLog("PositionUtils", "Failed with fields: $userField, $passField")
+                }
+            }
+        }
+        
+        safeLog("PositionUtils", "All login attempts failed")
+        return false
     }
 
     fun makeAuthenticatedRequest(context: Context, url: String): Response? {
@@ -149,7 +285,7 @@ object PositionUtils {
                     
                     // Check if position changed
                     if (lastPosition != newPosition && lastPosition != "--") {
-                        android.util.Log.i("PositionUtils", "Position changed from $lastPosition to $newPosition")
+                        safeLog("PositionUtils", "Position changed from $lastPosition to $newPosition")
                         return true
                     }
                     return true // success
@@ -163,16 +299,16 @@ object PositionUtils {
                     if (loginUrl.isNotEmpty() && empNumber.isNotEmpty() && userPassword.isNotEmpty()) {
                         clearSessionCookie(context)
                         if (loginAndCacheSession(context, loginUrl, empNumber, userPassword)) {
-                            android.util.Log.i("PositionUtils", "Re-login successful, retrying fetch")
+                            safeLog("PositionUtils", "Re-login successful, retrying fetch")
                             continue
                         }
                     }
                 }
             } catch (e: Exception) {
-                android.util.Log.e("PositionUtils", "Fetch attempt ${attempt + 1} failed", e)
+                safeLog("PositionUtils", "Fetch attempt ${attempt + 1} failed: ${e.message}")
                 attempt++
                 if (attempt >= maxAttempts) {
-                    android.util.Log.e("PositionUtils", "All fetch attempts failed.")
+                    safeLog("PositionUtils", "All fetch attempts failed.")
                     return false
                 }
                 // Wait a bit before retrying

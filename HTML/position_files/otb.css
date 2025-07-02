@@ -1,0 +1,55 @@
+#managerOtbArea table {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 0px solid #f00;
+    margin: 0px;
+    padding: 0px;
+    font-size:  20px !important;
+}
+
+#managerOtbArea tbody {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 0px solid #f00;
+    margin: 0px;
+    padding: 0px;
+}
+
+#managerOtbArea th {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 0px solid #f00;
+    margin: 0px;
+    padding: 5px;
+    font-size:  20px !important;
+}
+
+#managerOtbArea tr {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 0px solid #f00;
+    margin: 0px;
+    padding: 0px;
+    font-size:  20px !important;
+}
+
+#managerOtbArea td {
+    font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+    border: 0px solid #f00;
+    margin: 0px;
+    padding: 5px;
+    font-size:  20px !important;
+}
+
+#managerOtbArea {
+    margin: 0 10px 0 10px !important; 
+}
+
+#managerOtbArea thead {
+    font-size:  20px !important;
+}
+
+#managerOtbArea label {
+    font-size:  20px !important;
+}
+
+#datatables a {
+    color:  blue !important;
+    text-decoration: none;
+}
