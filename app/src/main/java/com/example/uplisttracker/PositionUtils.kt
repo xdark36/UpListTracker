@@ -150,7 +150,6 @@ object PositionUtils {
         safeLog("PositionUtils", "Attempting login to: $loginUrl")
         safeLog("PositionUtils", "Employee number: $empNumber")
         
-        // Get the login page first
         var sessionCookies = mutableListOf<String>()
         client.newCall(getRequest).execute().use { getResponse ->
             if (getResponse.isSuccessful) {
@@ -180,7 +179,6 @@ object PositionUtils {
                 .url(loginUrl)
                 .post(loginRequestBody)
                 .apply {
-                    // Add any session cookies we got from the GET request
                     if (sessionCookies.isNotEmpty()) {
                         addHeader("Cookie", sessionCookies.joinToString("; "))
                     }
@@ -188,29 +186,29 @@ object PositionUtils {
                 .build()
             
             client.newCall(loginRequest).execute().use { response ->
-                val cookies = response.headers("Set-Cookie")
+                val postCookies = response.headers("Set-Cookie")
                 val responseBody = response.body?.string() ?: ""
-                val success = cookies.isNotEmpty() && response.isSuccessful
-                
-                safeLog("PositionUtils", "Login response code: ${response.code}")
-                safeLog("PositionUtils", "Cookies received: ${cookies.size}")
-                safeLog("PositionUtils", "Response successful: ${response.isSuccessful}")
-                safeLog("PositionUtils", "Response body length: ${responseBody.length}")
-                
-                // Check if login was successful by looking for common success indicators
+                val success = postCookies.isNotEmpty() && response.isSuccessful
                 val isLoginSuccess = responseBody.contains("logout", ignoreCase = true) || 
                                    responseBody.contains("welcome", ignoreCase = true) ||
                                    responseBody.contains("dashboard", ignoreCase = true) ||
                                    responseBody.contains("menu", ignoreCase = true) ||
                                    !responseBody.contains("login", ignoreCase = true) ||
-                                   response.code == 302 // Redirect after successful login
+                                   response.code == 302
                 
+                safeLog("PositionUtils", "Login response code: ${response.code}")
+                safeLog("PositionUtils", "Cookies received: ${postCookies.size}")
+                safeLog("PositionUtils", "Response successful: ${response.isSuccessful}")
+                safeLog("PositionUtils", "Response body length: ${responseBody.length}")
                 safeLog("PositionUtils", "Login success indicators: $isLoginSuccess")
                 
                 if (success || (response.isSuccessful && isLoginSuccess)) {
-                    if (cookies.isNotEmpty()) {
-                        cacheSessionCookie(context, cookies)
-                        safeLog("PositionUtils", "Session cached successfully with fields: $userField, $passField")
+                    if (postCookies.isNotEmpty()) {
+                        cacheSessionCookie(context, postCookies)
+                        safeLog("PositionUtils", "Session cached successfully with POST cookies: $userField, $passField")
+                    } else if (sessionCookies.isNotEmpty()) {
+                        cacheSessionCookie(context, sessionCookies)
+                        safeLog("PositionUtils", "Session cached successfully with GET cookies: $userField, $passField")
                     } else {
                         safeLog("PositionUtils", "Login appears successful but no cookies - may use different auth method")
                     }

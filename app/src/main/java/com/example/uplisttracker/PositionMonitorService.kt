@@ -27,6 +27,8 @@ import java.net.CookiePolicy
 import java.util.concurrent.TimeUnit
 import android.Manifest
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import java.io.File
+import android.util.Log
 
 class PositionMonitorService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + Job())
@@ -239,6 +241,16 @@ class PositionMonitorService : Service() {
                     Timber.d("Position unchanged: '$newPosition'")
                 } else {
                     Timber.w("Position element found but value is empty")
+                }
+                // TODO: Restore BuildConfig.DEBUG check for Android builds only
+                if (newPosition.isEmpty() || newPosition == "--") {
+                    try {
+                        val debugFile = File("/sdcard/position_debug.html")
+                        debugFile.writeText(html)
+                        Log.d("PositionMonitorService", "Dumped HTML to /sdcard/position_debug.html")
+                    } catch (e: Exception) {
+                        Log.e("PositionMonitorService", "Failed to dump HTML: ${e.message}")
+                    }
                 }
                 return // Success, exit retry loop
             } catch (e: Exception) {

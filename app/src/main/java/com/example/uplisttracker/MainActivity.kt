@@ -41,6 +41,9 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.widget.LinearLayout
+import androidx.core.app.ActivityCompat
+import android.provider.Settings
+import android.app.AlertDialog
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -81,6 +84,8 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, "Notification permission required for alerts", Toast.LENGTH_LONG).show()
         }
     }
+
+    private val LOCATION_PERMISSION_REQUEST_CODE = 1001
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -207,6 +212,8 @@ class MainActivity : ComponentActivity() {
                 showBanner(bannerText, "Position updated: $newPosition", true)
             }
         }
+
+        checkAndRequestLocationPermissions()
     }
 
     override fun onDestroy() {
@@ -565,5 +572,52 @@ class MainActivity : ComponentActivity() {
             .remove("position_history")
             .remove("position_timestamps")
             .apply()
+    }
+
+    private fun checkAndRequestLocationPermissions() {
+        val permissions = arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+        val missing = permissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, missing.toTypedArray(), LOCATION_PERMISSION_REQUEST_CODE)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.any { it != PackageManager.PERMISSION_GRANTED }) {
+                AlertDialog.Builder(this)
+                    .setTitle("Location Permission Required")
+                    .setMessage("Location permission is required to access WiFi SSID. Please grant it in settings.")
+                    .setPositiveButton("Open Settings") { _, _ ->
+                        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = android.net.Uri.fromParts("package", packageName, null)
+                        })
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
+        }
+    }
+
+    private fun promptEnableLocationServicesIfNeeded() {
+        val locationManager = getSystemService(LOCATION_SERVICE) as android.location.LocationManager
+        val enabled = locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+                      locationManager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
+        if (!enabled) {
+            AlertDialog.Builder(this)
+                .setTitle("Enable Location Services")
+                .setMessage("Location services are required to access WiFi SSID. Please enable them.")
+                .setPositiveButton("Open Settings") { _, _ ->
+                    startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
     }
 }

@@ -7,7 +7,7 @@ A Kotlin Android app that monitors a user's "up" position (queue or sales rank) 
 ### Core Functionality
 - **Wi-Fi SSID Monitoring**: Only fetches position data when connected to the configured store Wi-Fi
 - **Real-time Monitoring**: Continuous background monitoring with configurable polling intervals (1-15 minutes)
-- **Position Tracking**: Extracts position data from web pages using CSS selectors
+- **Position Tracking**: Robustly extracts position data from web pages using multiple CSS selectors and pattern matching. Only valid position values are returned, even for generic selectors like :contains(Position). Compatible with HTML structures like #btnSalesUpStatus and 'Position # X' patterns.
 - **Session Management**: Automatic login and session cookie caching with expiration handling
 - **Foreground Service**: Persistent monitoring service with notification controls
 
@@ -70,6 +70,7 @@ A Kotlin Android app that monitors a user's "up" position (queue or sales rank) 
 - **Better Error Messages**: More descriptive error messages for users
 - **Accessibility**: Enhanced content descriptions and screen reader support
 - **Debug Tools**: Added testing utilities for development and QA
+- **Robust Position Extraction**: Extraction logic now ensures only valid position values are returned, never generic text. Compatible with a wide range of HTML formats, including #btnSalesUpStatus and 'Position # X'.
 
 ## Setup Instructions
 
