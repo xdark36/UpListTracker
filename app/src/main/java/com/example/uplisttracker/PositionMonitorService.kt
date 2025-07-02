@@ -209,16 +209,17 @@ class PositionMonitorService : Service() {
                 val loginUrl = prefs.getString("login_url", "https://selling1.vcfcorp.com/") ?: "https://selling1.vcfcorp.com/"
                 val empNumber = prefs.getString("emp_number", "90045") ?: "90045"
                 val userPassword = prefs.getString("user_password", "03") ?: "03"
-                var sessionCookie = PositionUtils.getSessionCookie(this)
-                var loginSuccess = sessionCookie != null
-                if (!loginSuccess) {
-                    loginSuccess = PositionUtils.loginAndCacheSession(this, loginUrl, empNumber, userPassword)
-                    sessionCookie = PositionUtils.getSessionCookie(this)
-                }
+                
+                // Always clear session and perform fresh login to get latest position data
+                PositionUtils.clearSessionCookie(this)
+                val loginSuccess = PositionUtils.loginAndCacheSession(this, loginUrl, empNumber, userPassword)
+                val sessionCookie = PositionUtils.getSessionCookie(this)
+                
                 if (!loginSuccess || sessionCookie == null) {
                     Timber.e("Login failed; cannot fetch position.")
                     return
                 }
+                
                 val response = PositionUtils.makeAuthenticatedRequest(this, url)
                 if (response == null || !response.isSuccessful) {
                     Timber.e("HTTP request failed: ${response?.code ?: "?"}")
