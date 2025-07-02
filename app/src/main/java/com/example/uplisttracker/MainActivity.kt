@@ -2,6 +2,7 @@ package com.example.uplisttracker
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import dagger.hilt.android.AndroidEntryPoint
 import android.net.wifi.WifiManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -157,7 +158,7 @@ class MainActivity : ComponentActivity() {
 
             // Share button
             shareButton.setOnClickListener {
-                val position = prefs.getString("last_position", "--")
+                val position = prefs.getString("last_position", "--") ?: "--"
                 sharePosition(position)
             }
 
