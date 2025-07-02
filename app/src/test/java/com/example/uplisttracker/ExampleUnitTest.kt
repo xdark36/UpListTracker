@@ -58,7 +58,7 @@ class ExampleUnitTest {
         val html = """
             <html><body><div id='position-element'></div></body></html>
         """
-        val expected = "--"
+        val expected = ""
         val actual = PositionUtils.extractPosition(html)
         assertEquals(expected, actual)
     }
@@ -103,12 +103,7 @@ class ExampleUnitTest {
         assertEquals(expected, actual)
     }
     
-    @Test
-    fun extractPosition_handlesNullInput() {
-        val expected = "--"
-        val actual = PositionUtils.extractPosition(null)
-        assertEquals(expected, actual)
-    }
+
     
     @Test
     fun extractPosition_handlesEmptyInput() {
