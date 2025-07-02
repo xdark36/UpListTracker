@@ -133,8 +133,41 @@ object PositionUtils {
         val maxAttempts = 2
         while (attempt < maxAttempts) {
             try {
-                // ... existing fetch logic ...
-                return true // success
+                val response = makeAuthenticatedRequest(context, url)
+                if (response?.isSuccessful == true) {
+                    val html = response.body?.string() ?: ""
+                    val newPosition = extractPosition(html)
+                    
+                    // Store the new position
+                    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    val lastPosition = prefs.getString("last_position", "--")
+                    
+                    prefs.edit()
+                        .putString("last_position", newPosition)
+                        .putString("last_checked", getCurrentTimestamp())
+                        .apply()
+                    
+                    // Check if position changed
+                    if (lastPosition != newPosition && lastPosition != "--") {
+                        android.util.Log.i("PositionUtils", "Position changed from $lastPosition to $newPosition")
+                        return true
+                    }
+                    return true // success
+                } else {
+                    // If response is not successful, try to re-login
+                    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    val loginUrl = prefs.getString("login_url", "") ?: ""
+                    val empNumber = prefs.getString("emp_number", "") ?: ""
+                    val userPassword = prefs.getString("user_password", "") ?: ""
+                    
+                    if (loginUrl.isNotEmpty() && empNumber.isNotEmpty() && userPassword.isNotEmpty()) {
+                        clearSessionCookie(context)
+                        if (loginAndCacheSession(context, loginUrl, empNumber, userPassword)) {
+                            android.util.Log.i("PositionUtils", "Re-login successful, retrying fetch")
+                            continue
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 android.util.Log.e("PositionUtils", "Fetch attempt ${attempt + 1} failed", e)
                 attempt++
@@ -142,8 +175,20 @@ object PositionUtils {
                     android.util.Log.e("PositionUtils", "All fetch attempts failed.")
                     return false
                 }
+                // Wait a bit before retrying
+                try {
+                    Thread.sleep(1000)
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return false
+                }
             }
         }
         return false
+    }
+
+    private fun getCurrentTimestamp(): String {
+        val dateFormat = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+        return dateFormat.format(java.util.Date())
     }
 } 

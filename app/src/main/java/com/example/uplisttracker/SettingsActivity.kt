@@ -157,6 +157,15 @@ class SettingsActivity : AppCompatActivity() {
         }
         layout.addView(testNotifButton)
         
+        // Test Connection Button
+        val testConnectionButton = Button(this)
+        testConnectionButton.text = "Test Connection"
+        testConnectionButton.setPadding(0, 8, 0, 0)
+        testConnectionButton.setOnClickListener {
+            testConnection()
+        }
+        layout.addView(testConnectionButton)
+        
         // Debug: Force Error Button (only in debug builds)
         if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
             val forceErrorButton = Button(this)
@@ -223,11 +232,55 @@ class SettingsActivity : AppCompatActivity() {
         }
         
         clearSessionButton.setOnClickListener {
-            prefs.edit()
-                .remove("cached_cookies")
-                .remove("cookie_timestamp")
-                .apply()
-            Toast.makeText(this, "Cached session cleared!", Toast.LENGTH_SHORT).show()
+            PositionUtils.clearSessionCookie(this)
+            Toast.makeText(this, "Session cleared", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun testConnection() {
+        val prefs = getSharedPreferences("up_prefs", Context.MODE_PRIVATE)
+        val loginUrl = prefs.getString("login_url", "") ?: ""
+        val empNumber = prefs.getString("emp_number", "") ?: ""
+        val userPassword = prefs.getString("user_password", "") ?: ""
+        val positionUrl = prefs.getString("url", "") ?: ""
+        
+        if (loginUrl.isEmpty() || empNumber.isEmpty() || userPassword.isEmpty() || positionUrl.isEmpty()) {
+            Toast.makeText(this, "Please save your settings first", Toast.LENGTH_LONG).show()
+            return
+        }
+        
+        Toast.makeText(this, "Testing connection...", Toast.LENGTH_SHORT).show()
+        
+        // Run test in background
+        Thread {
+            try {
+                // Test login
+                val loginSuccess = PositionUtils.loginAndCacheSession(this, loginUrl, empNumber, userPassword)
+                if (!loginSuccess) {
+                    runOnUiThread {
+                        Toast.makeText(this, "Login failed - check credentials", Toast.LENGTH_LONG).show()
+                    }
+                    return@Thread
+                }
+                
+                // Test position fetch
+                val response = PositionUtils.makeAuthenticatedRequest(this, positionUrl)
+                if (response?.isSuccessful == true) {
+                    val html = response.body?.string() ?: ""
+                    val position = PositionUtils.extractPosition(html)
+                    runOnUiThread {
+                        Toast.makeText(this, "Connection successful! Position: $position", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    runOnUiThread {
+                        Toast.makeText(this, "Position fetch failed - check URL", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, "Test failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
     }
 } 
